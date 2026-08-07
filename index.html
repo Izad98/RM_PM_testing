@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#101319">
+<title>HEMAS QA System — Material Testing Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root{
+  --ink:#101319; --panel:#171b23; --raise:#1f242f; --sink:#0b0d12;
+  --line:#2a3140; --line-soft:#212734;
+  --teal:#12b394; --teal-dim:#0d7d68; --teal-glow:rgba(18,179,148,.14);
+  --amber:#e9a13b; --amber-glow:rgba(233,161,59,.13);
+  --red:#ef5b54; --red-glow:rgba(239,91,84,.13);
+  --txt:#e9edf2; --mut:#8792a3; --faint:#5c6577;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --r:6px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink); color:var(--txt); font-family:var(--sans);
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+a{color:var(--teal)}
+::selection{background:var(--teal-dim);color:#fff}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- primitives ---------- */
+.mono{font-family:var(--mono)}
+.eyebrow{
+  font-family:var(--mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--faint);
+}
+.btn{
+  padding:10px 16px; border-radius:var(--r); background:var(--teal); color:#04120e;
+  font-weight:600; font-size:13px; transition:background .15s, transform .05s;
+  display:inline-flex; align-items:center; gap:8px; justify-content:center;
+}
+.btn:hover{background:#16c9a7}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.btn.ghost:hover{background:var(--raise);border-color:var(--teal-dim)}
+.btn.danger{background:transparent;border:1px solid rgba(239,91,84,.4);color:var(--red)}
+.btn.danger:hover{background:var(--red-glow)}
+.btn.sm{padding:6px 11px;font-size:12px}
+.field{margin-bottom:14px}
+.field label{
+  display:block; margin-bottom:6px; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--mut); font-weight:500;
+}
+.field label.req::after{content:' *';color:var(--red)}
+.field input,.field select,.field textarea{
+  width:100%; padding:10px 12px; border:1px solid var(--line);
+  background:var(--sink); border-radius:var(--r); transition:border-color .15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none; border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-glow);
+}
+.field input[type=date]{font-family:var(--mono)}
+.field .hint{margin-top:5px;font-size:11px;color:var(--faint)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}
+@media(max-width:720px){.grid2,.grid3{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;padding:20px}
+.card h3{
+  margin:0 0 16px; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--mut); font-weight:600; display:flex; align-items:center; gap:10px;
+}
+.card h3::after{content:'';flex:1;height:1px;background:var(--line-soft)}
+
+/* status pills */
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:100px;
+  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;white-space:nowrap;
+}
+.pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.p-wait{background:var(--amber-glow);color:var(--amber)}
+.p-test{background:rgba(120,160,255,.13);color:#7ba3ff}
+.p-pass{background:var(--teal-glow);color:var(--teal)}
+.p-fail{background:var(--red-glow);color:var(--red)}
+.p-urg{background:var(--red-glow);color:var(--red)}
+
+/* ---------- gate screens (setup / sign in) ---------- */
+.gate{
+  min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:
+    radial-gradient(700px 380px at 50% -10%,rgba(18,179,148,.10),transparent 70%),
+    var(--ink);
+}
+.gate-card{width:100%;max-width:390px}
+.gate-brand{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.gate h1{font-size:20px;margin:18px 0 6px;font-weight:600;letter-spacing:-.01em}
+.gate p.sub{color:var(--mut);margin:0 0 24px;font-size:13px}
+.gate-box{background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;padding:24px}
+.brand-mark{
+  font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.14em;color:#fff;
+}
+.brand-tag{
+  background:var(--teal);color:#04120e;font-family:var(--mono);font-size:9px;font-weight:600;
+  padding:3px 6px;border-radius:3px;letter-spacing:.1em;
+}
+.msg{
+  padding:10px 12px;border-radius:var(--r);font-size:12.5px;margin-bottom:14px;display:none;
+}
+.msg.err{display:block;background:var(--red-glow);color:#ffa9a4;border:1px solid rgba(239,91,84,.3)}
+.msg.ok{display:block;background:var(--teal-glow);color:#68e3c6;border:1px solid rgba(18,179,148,.3)}
+
+/* ---------- app shell ---------- */
+#app{display:none;min-height:100dvh}
+#app.on{display:block}
+.topbar{
+  position:sticky;top:0;z-index:40;height:56px;background:rgba(16,19,25,.92);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:16px;
+}
+.topbar .brand{display:flex;align-items:center;gap:9px;min-width:0}
+.topbar .brand small{color:var(--faint);font-size:11.5px;white-space:nowrap}
+@media(max-width:860px){.topbar .brand small{display:none}}
+.who{display:flex;align-items:center;gap:10px}
+.who-txt{text-align:right;line-height:1.25}
+.who-txt b{display:block;font-size:12.5px;font-weight:600}
+.who-txt span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.avatar{
+  width:32px;height:32px;border-radius:8px;background:var(--raise);border:1px solid var(--line);
+  display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal);
+}
+@media(max-width:520px){.who-txt{display:none}}
+
+.shell{display:flex;min-height:calc(100dvh - 56px)}
+.rail{
+  width:206px;flex-shrink:0;border-right:1px solid var(--line-soft);padding:18px 12px;
+  position:sticky;top:56px;height:calc(100dvh - 56px);
+}
+.rail .eyebrow{padding:0 10px;margin-bottom:10px}
+.navbtn{
+  width:100%;display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--r);
+  color:var(--mut);font-size:13.5px;font-weight:500;text-align:left;margin-bottom:2px;
+  transition:background .13s,color .13s;
+}
+.navbtn:hover{background:var(--raise);color:var(--txt)}
+.navbtn.on{background:var(--teal-glow);color:var(--teal);font-weight:600}
+.navbtn svg{width:17px;height:17px;flex-shrink:0}
+.navbtn .badge{
+  margin-left:auto;background:var(--amber);color:#1a1207;font-family:var(--mono);
+  font-size:10px;font-weight:600;padding:1px 6px;border-radius:100px;
+}
+main{flex:1;min-width:0;padding:26px 28px 60px}
+.page-head{margin-bottom:22px}
+.page-head h2{margin:5px 0 4px;font-size:22px;font-weight:600;letter-spacing:-.015em}
+.page-head p{margin:0;color:var(--mut);font-size:13px}
+.view{display:none}
+.view.on{display:block;animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* mobile nav */
+.tabbar{display:none}
+@media(max-width:860px){
+  .rail{display:none}
+  main{padding:20px 16px calc(76px + env(safe-area-inset-bottom))}
+  .tabbar{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:45;
+    background:rgba(16,19,25,.96);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tabbar .navbtn{
+    flex-direction:column;gap:3px;font-size:10px;padding:6px 2px;margin:0;
+    letter-spacing:.02em;justify-content:center;text-align:center;
+  }
+  .tabbar .navbtn svg{width:19px;height:19px}
+  .tabbar .navbtn .badge{
+    position:absolute;top:2px;margin-left:22px;font-size:9px;padding:0 4px;
+  }
+  .tabbar .navbtn{position:relative}
+}
+
+/* ---------- dashboard ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:20px}
+.kpi{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;padding:15px 16px;
+  position:relative;overflow:hidden;
+}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--line)}
+.kpi.t::before{background:var(--teal)}
+.kpi.a::before{background:var(--amber)}
+.kpi.r::before{background:var(--red)}
+.kpi .k-label{font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+.kpi .k-val{font-family:var(--mono);font-size:27px;font-weight:600;line-height:1.15;margin-top:6px;letter-spacing:-.02em}
+.kpi .k-sub{font-size:11px;color:var(--mut);margin-top:3px}
+.two-col{display:grid;grid-template-columns:1.45fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:980px){.two-col{grid-template-columns:1fr}}
+.bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:8px}
+.bar-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.bar-stack{width:100%;max-width:38px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;flex:1}
+.bar-seg{width:100%;border-radius:2px;min-height:0;transition:height .4s ease}
+.bar-label{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.05em}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.legend i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px}
+.legend span{font-size:11px;color:var(--mut);display:flex;align-items:center}
+.donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.donut-mid{font-family:var(--mono);font-size:22px;font-weight:600;fill:var(--txt)}
+.donut-sub{font-family:var(--mono);font-size:8px;fill:var(--faint);letter-spacing:.14em}
+.rankrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.rankrow:last-child{border-bottom:none}
+.rankrow .rname{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rankbar{width:78px;height:5px;background:var(--raise);border-radius:3px;overflow:hidden;flex-shrink:0}
+.rankbar i{display:block;height:100%;border-radius:3px}
+.rankrow .rnum{font-family:var(--mono);font-size:12px;color:var(--mut);width:52px;text-align:right;flex-shrink:0}
+
+/* ---------- chain of custody strip (signature element) ---------- */
+.chain{display:flex;align-items:flex-start;gap:0;margin:2px 0}
+.chain-node{flex:1;position:relative;text-align:center;min-width:0}
+.chain-node .dot{
+  width:11px;height:11px;border-radius:50%;background:var(--sink);
+  border:2px solid var(--line);margin:0 auto 7px;position:relative;z-index:2;
+}
+.chain-node.done .dot{background:var(--teal);border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-glow)}
+.chain-node.fail .dot{background:var(--red);border-color:var(--red);box-shadow:0 0 0 3px var(--red-glow)}
+.chain-node.now .dot{background:var(--amber);border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-glow);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px var(--amber-glow)}50%{box-shadow:0 0 0 6px rgba(233,161,59,.06)}}
+.chain-node::before{
+  content:'';position:absolute;top:5px;left:-50%;width:100%;height:2px;background:var(--line);z-index:1;
+}
+.chain-node:first-child::before{display:none}
+.chain-node.done::before,.chain-node.fail::before{background:var(--teal-dim)}
+.chain-node .cn-t{
+  font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);
+}
+.chain-node.done .cn-t,.chain-node.now .cn-t,.chain-node.fail .cn-t{color:var(--txt)}
+.chain-node .cn-d{font-family:var(--mono);font-size:9.5px;color:var(--faint);margin-top:2px}
+
+/* ---------- record list ---------- */
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.toolbar input,.toolbar select{
+  padding:8px 11px;background:var(--sink);border:1px solid var(--line);border-radius:var(--r);font-size:13px;
+}
+.toolbar input{flex:1;min-width:160px}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--teal)}
+.reclist{display:flex;flex-direction:column;gap:9px}
+.rec{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:9px;padding:14px 16px;
+  display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;
+  transition:border-color .15s,background .15s;text-align:left;width:100%;
+}
+.rec:hover{border-color:var(--teal-dim);background:var(--raise)}
+.rec-code{font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:.06em}
+.rec-title{font-size:14.5px;font-weight:600;margin:3px 0 5px;letter-spacing:-.01em}
+.rec-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--mut)}
+.rec-meta b{font-weight:500;color:var(--faint);font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-right:5px}
+.rec-right{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+@media(max-width:600px){
+  .rec{grid-template-columns:1fr}
+  .rec-right{flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+}
+.empty{text-align:center;padding:52px 20px;color:var(--mut)}
+.empty svg{width:34px;height:34px;color:var(--line);margin-bottom:12px}
+.empty b{display:block;color:var(--txt);font-size:15px;margin-bottom:5px;font-weight:600}
+.empty p{margin:0 0 16px;font-size:13px}
+
+/* users table */
+.utable{width:100%;border-collapse:collapse}
+.utable th{
+  text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);padding:0 12px 9px;font-weight:500;border-bottom:1px solid var(--line-soft);
+}
+.utable td{padding:12px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}
+.utable tr:last-child td{border-bottom:none}
+@media(max-width:700px){
+  .utable,.utable tbody,.utable tr,.utable td{display:block;width:100%}
+  .utable thead{display:none}
+  .utable tr{border:1px solid var(--line-soft);border-radius:8px;margin-bottom:9px;padding:6px 4px}
+  .utable td{border:none;padding:6px 12px;display:flex;justify-content:space-between;gap:12px}
+  .utable td::before{content:attr(data-l);font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+}
+
+/* ---------- report drawer ---------- */
+.drawer{
+  display:none;position:fixed;inset:0;z-index:60;background:var(--ink);flex-direction:column;
+}
+.drawer.on{display:flex}
+.drawer-top{
+  height:56px;flex-shrink:0;border-bottom:1px solid var(--line);display:flex;align-items:center;
+  justify-content:space-between;padding:0 16px;gap:12px;background:var(--panel);
+}
+.drawer-top .dt-info{min-width:0}
+.drawer-top .dt-info b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drawer-top .dt-info span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:600px){
+  .drawer-top{padding:0 10px;gap:8px}
+  .drawer-top .btn{padding:7px 9px;font-size:11.5px;white-space:nowrap}
+  .drawer-top .dt-info b{font-size:12.5px}
+  .drawer-top .dt-info span{display:none}
+}
+.drawer-body{flex:1;display:flex;overflow:hidden}
+.dpane-form{
+  width:44%;min-width:360px;overflow-y:auto;padding:22px;border-right:1px solid var(--line-soft);
+  background:var(--panel);
+}
+.dpane-prev{flex:1;overflow:auto;background:#3f4247;padding:26px;display:flex;justify-content:center;align-items:flex-start}
+.swap{display:none}
+@media(max-width:1000px){
+  .dpane-form{width:100%;min-width:0;border-right:none}
+  .dpane-prev{display:none;padding:14px}
+  .drawer.preview .dpane-form{display:none}
+  .drawer.preview .dpane-prev{display:flex}
+  .swap{display:inline-flex}
+  .dpane-prev{align-items:flex-start}
+  .dpane-prev .doc{zoom:.45;box-shadow:0 2px 14px rgba(0,0,0,.4)}
+}
+@media(max-width:1000px) and (min-width:640px){.dpane-prev .doc{zoom:.68}}
+
+/* editable test rows */
+.trow{
+  display:grid;grid-template-columns:22px 1.3fr 1.3fr 1fr 1fr 96px 30px;gap:6px;align-items:center;
+  margin-bottom:6px;
+}
+.trow input,.trow select{
+  padding:8px 9px;background:var(--sink);border:1px solid var(--line);border-radius:5px;font-size:12.5px;width:100%;
+}
+.trow input:focus,.trow select:focus{outline:none;border-color:var(--teal)}
+.trow .tn{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:center}
+.trow .tx{
+  width:28px;height:30px;border-radius:5px;color:var(--faint);font-size:16px;line-height:1;
+  border:1px solid transparent;
+}
+.trow .tx:hover{color:var(--red);border-color:rgba(239,91,84,.35)}
+.trow-head{
+  display:grid;grid-template-columns:22px 1.3fr 1.3fr 1fr 1fr 96px 30px;gap:6px;
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+  margin-bottom:7px;padding:0 2px;
+}
+@media(max-width:1000px){
+  .trow-head{display:none}
+  .trow{
+    grid-template-columns:1fr 1fr;gap:7px;padding:11px;border:1px solid var(--line-soft);
+    border-radius:8px;margin-bottom:9px;background:var(--sink);position:relative;
+  }
+  .trow .tn{
+    grid-column:1/-1;text-align:left;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  }
+  .trow .tn::before{content:'Test '}
+  .trow input:nth-of-type(1){grid-column:1/-1}
+  .trow .tx{position:absolute;top:7px;right:7px}
+}
+.photo-drop{
+  border:1px dashed var(--line);border-radius:8px;padding:16px;text-align:center;cursor:pointer;
+  transition:border-color .15s,background .15s;display:block;
+}
+.photo-drop:hover{border-color:var(--teal);background:var(--teal-glow)}
+.photo-drop img{max-width:100%;max-height:150px;border-radius:5px;display:block;margin:0 auto}
+.photo-drop span{font-size:12px;color:var(--mut)}
+.statusbar{
+  display:flex;gap:8px;background:var(--sink);border:1px solid var(--line);border-radius:8px;padding:5px;
+}
+.statusbar button{
+  flex:1;padding:9px;border-radius:5px;font-size:12px;font-weight:600;color:var(--mut);
+  font-family:var(--mono);letter-spacing:.06em;transition:all .15s;
+}
+.statusbar button.on[data-v=PASS]{background:var(--teal);color:#04120e}
+.statusbar button.on[data-v=FAIL]{background:var(--red);color:#2a0a08}
+.statusbar button.on[data-v=PENDING]{background:var(--raise);color:var(--txt)}
+
+/* ---------- A4 document (print + pdf) ---------- */
+.doc{
+  background:#fff;color:#000;width:210mm;min-height:297mm;padding:10mm;
+  box-shadow:0 3px 26px rgba(0,0,0,.5);font-family:'Segoe UI',Arial,sans-serif;font-size:11px;
+}
+.doc .d-head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #00796b;padding-bottom:9px;margin-bottom:10px}
+.doc .d-head img{max-height:46px;max-width:120px}
+.doc .d-ttl{text-align:center;flex:1;padding:0 10px}
+.doc .d-ttl h1{margin:0;font-size:15px;color:#00796b;letter-spacing:.5px}
+.doc .d-ttl h2{margin:3px 0 0;font-size:11.5px;color:#333;font-weight:600;letter-spacing:.6px}
+.doc .d-meta{font-size:9.5px;text-align:right;color:#444;line-height:1.6;font-family:'Courier New',monospace}
+.doc .d-sect{
+  background:#00796b;color:#fff;padding:3px 8px;font-size:10px;font-weight:700;
+  margin:11px 0 6px;letter-spacing:.6px;
+}
+.doc table{width:100%;border-collapse:collapse;font-size:10px}
+.doc table th,.doc table td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top}
+.doc table th{background:#eef4f3;font-weight:600;color:#00463c}
+.doc .d-final{
+  display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:10px;
+  border:1px solid #999;padding:6px 10px;background:#fafafa;
+}
+.doc .d-final b{font-size:10.5px;letter-spacing:.5px}
+.doc .fbox{
+  padding:5px 20px;font-weight:700;font-size:12px;border:2px solid #666;color:#666;letter-spacing:1px;
+}
+.doc .fbox.pass{border-color:#00796b;color:#00796b;background:#e6f4f1}
+.doc .fbox.fail{border-color:#c62828;color:#c62828;background:#fdeaea}
+.doc .d-note{border:1px solid #999;padding:7px;min-height:34px;font-size:10px;white-space:pre-wrap;word-break:break-word}
+.doc .d-img{
+  border:1px dashed #aaa;min-height:100px;display:flex;align-items:center;justify-content:center;
+  color:#999;font-size:9.5px;padding:6px;
+}
+.doc .d-img img{max-width:100%;max-height:230px}
+.doc .d-sign{display:flex;justify-content:space-around;margin-top:26px;text-align:center;font-size:10px}
+.doc .d-sign .sb{width:40%}
+.doc .d-sign .sl{border-top:1px solid #333;margin-bottom:5px;padding-top:0}
+.doc .d-sign small{color:#555;font-size:9px}
+.doc .d-foot{
+  margin-top:14px;border-top:1px solid #ccc;padding-top:5px;font-size:8.5px;color:#777;
+  display:flex;justify-content:space-between;font-family:'Courier New',monospace;
+}
+.doc .fail-r td{color:#c62828}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,80px);z-index:90;
+  background:var(--raise);border:1px solid var(--line);border-radius:9px;padding:12px 18px;
+  font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;transition:all .28s;pointer-events:none;
+  max-width:calc(100vw - 32px);
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.err{border-color:rgba(239,91,84,.5);color:#ffa9a4}
+#toast.ok{border-color:rgba(18,179,148,.5);color:#68e3c6}
+
+/* confirm sheet */
+.sheet{display:none;position:fixed;inset:0;z-index:80;background:rgba(5,7,10,.7);align-items:center;justify-content:center;padding:20px}
+.sheet.on{display:flex}
+.sheet-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:390px;width:100%}
+.sheet-box h4{margin:0 0 8px;font-size:16px;font-weight:600}
+.sheet-box p{margin:0 0 18px;color:var(--mut);font-size:13px}
+.sheet-act{display:flex;gap:9px;justify-content:flex-end}
+
+.spin{
+  width:15px;height:15px;border:2px solid rgba(255,255,255,.25);border-top-color:currentColor;
+  border-radius:50%;animation:sp .7s linear infinite;display:inline-block;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading{padding:40px;text-align:center;color:var(--mut)}
+
+@media print{
+  body>*{display:none!important}
+  .drawer.on{display:block!important;position:static}
+  .drawer-top,.dpane-form,.swap{display:none!important}
+  .drawer-body{display:block!important;overflow:visible}
+  .dpane-prev{display:flex!important;background:#fff;padding:0;overflow:visible}
+  .doc{box-shadow:none;width:100%;transform:none!important;margin:0!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 1. CONNECT TO SUPABASE (first run only) ============ -->
+<div class="gate" id="screen-setup" style="display:none">
+  <div class="gate-card">
+    <div class="gate-brand">
+      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
+    </div>
+    <h1>Connect your Supabase project</h1>
+    <p class="sub">Paste the project URL and anon key from Supabase → Project Settings → API. They are stored in this browser only.</p>
+    <div class="gate-box">
+      <div class="msg" id="setup-msg"></div>
+      <div class="field">
+        <label class="req">Project URL</label>
+        <input id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="req">Anon public key</label>
+        <input id="cfg-key" placeholder="eyJhbGciOi..." autocomplete="off">
+        <div class="hint">Use the anon key, never the service role key.</div>
+      </div>
+      <button class="btn" style="width:100%" id="btn-connect">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 2. SIGN IN ============ -->
+<div class="gate" id="screen-auth" style="display:none">
+  <div class="gate-card">
+    <div class="gate-brand">
+      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
+    </div>
+    <h1>Material testing portal</h1>
+    <p class="sub">Raw and packing material samples, from hand-over to release.</p>
+    <div class="gate-box">
+      <div class="msg" id="auth-msg"></div>
+      <div class="field">
+        <label>Work email</label>
+        <input id="log-email" type="email" autocomplete="username" placeholder="name@hemas.com">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="log-pass" type="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn" style="width:100%" id="btn-login">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. APP ============ -->
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
+      <small>Raw &amp; packing material testing portal</small>
+    </div>
+    <div class="who">
+      <div class="who-txt"><b id="me-name">—</b><span id="me-role">—</span></div>
+      <div class="avatar" id="me-initials">–</div>
+      <button class="btn ghost sm" id="btn-logout" title="Sign out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="rail">
+      <div class="eyebrow">Workspace</div>
+      <div id="nav-desktop"></div>
+    </nav>
+
+    <main>
+      <!-- ===== DASHBOARD ===== -->
+      <section class="view" id="v-dashboard">
+        <div class="page-head">
+          <div class="eyebrow">Overview</div>
+          <h2>Testing dashboard</h2>
+          <p id="dash-sub">All material samples received by QA.</p>
+        </div>
+        <div class="kpis" id="kpi-row"></div>
+        <div class="two-col">
+          <div class="card">
+            <h3>Samples released by month</h3>
+            <div class="bars" id="chart-bars"></div>
+            <div class="legend">
+              <span><i style="background:var(--teal)"></i>Passed</span>
+              <span><i style="background:var(--red)"></i>Failed</span>
+              <span><i style="background:var(--amber)"></i>Awaiting QA</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Current disposition</h3>
+            <div class="donut-wrap">
+              <svg viewBox="0 0 120 120" style="width:132px;height:132px;flex-shrink:0" id="chart-donut"></svg>
+              <div style="flex:1;min-width:120px" id="donut-key"></div>
+            </div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <h3>Suppliers by rejection rate</h3>
+            <div id="supplier-rank"></div>
+          </div>
+          <div class="card">
+            <h3>Latest activity</h3>
+            <div id="recent-feed"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== INTAKE (procurement) ===== -->
+      <section class="view" id="v-intake">
+        <div class="page-head">
+          <div class="eyebrow">Procurement</div>
+          <h2>Hand a sample to QA</h2>
+          <p>Log the sample you are sending across. QA picks it up from the test queue.</p>
+        </div>
+        <div style="max-width:760px">
+          <div class="card" style="margin-bottom:14px">
+            <h3>Material details</h3>
+            <div class="grid2">
+              <div class="field">
+                <label class="req">Material type</label>
+                <select id="in-type">
+                  <option value="Raw Material">Raw material</option>
+                  <option value="Packing Material">Packing material</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Document reference</label>
+                <input id="in-docref" value="QA-STR-01">
+              </div>
+            </div>
+            <div class="field">
+              <label class="req">Material description</label>
+              <input id="in-desc" placeholder="e.g. Superabsorbent polymer, grade SAP-3000">
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label class="req">Supplier name</label>
+                <input id="in-supplier" placeholder="e.g. Ningbo Eastcare">
+              </div>
+              <div class="field">
+                <label>R &amp; D reference no.</label>
+                <input id="in-rnd">
+              </div>
+            </div>
+            <div class="grid3">
+              <div class="field">
+                <label class="req">Sample size</label>
+                <input id="in-size" placeholder="e.g. 500 g">
+              </div>
+              <div class="field">
+                <label>Batch / lot no.</label>
+                <input id="in-batch">
+              </div>
+              <div class="field">
+                <label class="req">Date received</label>
+                <input id="in-received" type="date">
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label class="req">Used for</label>
+                <input id="in-used" placeholder="e.g. Baby Cheramy pull-up line">
+              </div>
+              <div class="field">
+                <label>Priority</label>
+                <select id="in-priority">
+                  <option>Normal</option>
+                  <option>Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Note to QA</label>
+              <textarea id="in-notes" rows="2" placeholder="Anything QA should know before testing"></textarea>
+            </div>
+          </div>
+          <div style="display:flex;gap:9px;flex-wrap:wrap">
+            <button class="btn" id="btn-intake-save">Send to QA</button>
+            <button class="btn ghost" id="btn-intake-clear">Clear form</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== QUEUE ===== -->
+      <section class="view" id="v-queue">
+        <div class="page-head">
+          <div class="eyebrow">Quality assurance</div>
+          <h2>Test queue</h2>
+          <p>Samples handed over by procurement and waiting on results.</p>
+        </div>
+        <div class="reclist" id="queue-list"></div>
+      </section>
+
+      <!-- ===== RECORDS ===== -->
+      <section class="view" id="v-records">
+        <div class="page-head">
+          <div class="eyebrow">Register</div>
+          <h2>Sample records</h2>
+          <p>Every sample logged in the portal, newest first.</p>
+        </div>
+        <div class="toolbar">
+          <input id="f-search" placeholder="Search material, supplier, batch or code">
+          <select id="f-status">
+            <option value="">All stages</option>
+            <option>Awaiting QA</option>
+            <option>Under Test</option>
+            <option>Released</option>
+          </select>
+          <select id="f-result">
+            <option value="">All results</option>
+            <option>PASS</option>
+            <option>FAIL</option>
+            <option>PENDING</option>
+          </select>
+          <select id="f-type">
+            <option value="">Both types</option>
+            <option>Raw Material</option>
+            <option>Packing Material</option>
+          </select>
+          <button class="btn ghost sm" id="btn-export">Export CSV</button>
+        </div>
+        <div class="reclist" id="rec-list"></div>
+      </section>
+
+      <!-- ===== USERS (admin) ===== -->
+      <section class="view" id="v-users">
+        <div class="page-head">
+          <div class="eyebrow">Administration</div>
+          <h2>Portal users</h2>
+          <p>Add people to the portal and set what they are allowed to do.</p>
+        </div>
+        <div class="two-col" style="grid-template-columns:1fr 340px">
+          <div class="card">
+            <h3>Everyone with access</h3>
+            <div style="overflow-x:auto">
+              <table class="utable"><tbody id="user-rows"></tbody></table>
+            </div>
+          </div>
+          <div class="card" style="align-self:start">
+            <h3>Add a user</h3>
+            <div class="msg" id="user-msg"></div>
+            <div class="field"><label class="req">Full name</label><input id="u-name"></div>
+            <div class="field"><label class="req">Work email</label><input id="u-email" type="email"></div>
+            <div class="field"><label>Designation</label><input id="u-post" placeholder="e.g. QA Executive"></div>
+            <div class="field">
+              <label class="req">Role</label>
+              <select id="u-role">
+                <option value="procurement">Procurement — hands samples to QA</option>
+                <option value="qa">QA — records and releases results</option>
+                <option value="admin">Admin — full access and user control</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="req">Temporary password</label>
+              <input id="u-pass" type="text" placeholder="At least 8 characters">
+              <div class="hint">Share it once, ask them to change it after signing in.</div>
+            </div>
+            <button class="btn" style="width:100%" id="btn-adduser">Add user</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="tabbar" id="nav-mobile"></nav>
+</div>
+
+<!-- ============ 4. REPORT DRAWER ============ -->
+<div class="drawer" id="drawer">
+  <div class="drawer-top">
+    <div style="display:flex;align-items:center;gap:12px;min-width:0">
+      <button class="btn ghost sm" id="btn-close-drawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <div class="dt-info">
+        <b id="dr-title">Sample</b>
+        <span class="mono" style="font-size:10px;color:var(--faint)" id="dr-code">—</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn ghost sm swap" id="btn-swap">Preview</button>
+      <button class="btn ghost sm" id="btn-pdf">PDF</button>
+      <button class="btn sm" id="btn-save-report">Save results</button>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <!-- editor -->
+    <div class="dpane-form" id="dpane-form">
+      <div class="card" style="margin-bottom:14px;padding:16px">
+        <h3 style="margin-bottom:12px">Chain of custody</h3>
+        <div class="chain" id="dr-chain"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h3>Handed over by procurement</h3>
+        <div id="dr-intake" style="font-size:12.5px"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h3>Test results</h3>
+        <div class="trow-head">
+          <span>#</span><span>Test</span><span>Specification</span><span>Method / COA</span><span>Reading</span><span>Result</span><span></span>
+        </div>
+        <div id="dr-rows"></div>
+        <button class="btn ghost sm" id="btn-addrow" style="margin-top:8px">+ Add test</button>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h3>Disposition</h3>
+        <div class="field">
+          <label>Date tested</label>
+          <input type="date" id="dr-tested">
+        </div>
+        <div class="field">
+          <label>Final quality status</label>
+          <div class="statusbar" id="dr-statusbar">
+            <button data-v="PENDING">Pending</button>
+            <button data-v="PASS">Pass</button>
+            <button data-v="FAIL">Fail</button>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Comments and remarks</label>
+          <textarea id="dr-comments" rows="3" placeholder="Observations, deviations, follow-up actions"></textarea>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h3>Sample inspection photo</h3>
+        <label class="photo-drop" for="dr-photo" id="dr-photo-box">
+          <span>Tap to add a photo of the sample</span>
+        </label>
+        <input type="file" id="dr-photo" accept="image/*" capture="environment" style="display:none">
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h3>Signatures</h3>
+        <div class="grid2">
+          <div class="field"><label>Analysed by</label><input id="dr-an"></div>
+          <div class="field"><label>Designation</label><input id="dr-anp" placeholder="QA Executive"></div>
+        </div>
+        <div class="grid2">
+          <div class="field" style="margin-bottom:0"><label>Reviewed and approved by</label><input id="dr-ap"></div>
+          <div class="field" style="margin-bottom:0"><label>Designation</label><input id="dr-app" placeholder="QA Manager"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:9px;flex-wrap:wrap;padding-bottom:20px">
+        <button class="btn" id="btn-release">Save and release report</button>
+        <button class="btn danger" id="btn-delete-sample">Delete sample</button>
+      </div>
+    </div>
+
+    <!-- A4 preview -->
+    <div class="dpane-prev" id="dpane-prev">
+      <div class="doc" id="doc">
+        <div class="d-head">
+          <img id="doc-logo" src="hcb logo.png" alt="" onerror="this.style.visibility='hidden'">
+          <div class="d-ttl">
+            <h1>HEMAS MANUFACTURING (PVT) LTD</h1>
+            <h2 id="p-title">SAMPLE RAW MATERIAL TESTING REPORT</h2>
+          </div>
+          <div class="d-meta">
+            Doc Ref: <span id="p-docref">QA-STR-01</span><br>
+            Sample: <span id="p-code">—</span><br>
+            Printed: <span id="p-printed">—</span>
+          </div>
+        </div>
+
+        <div class="d-sect">1. Material Details</div>
+        <table>
+          <tr><th style="width:22%">Material Type</th><td style="width:28%" id="p-type"></td>
+              <th style="width:22%">Supplier Name</th><td id="p-supplier"></td></tr>
+          <tr><th>Material Description</th><td id="p-desc"></td>
+              <th>Sample Size</th><td id="p-size"></td></tr>
+          <tr><th>R&amp;D Reference No.</th><td id="p-rnd"></td>
+              <th>Batch / Lot No.</th><td id="p-batch"></td></tr>
+          <tr><th>Date Received</th><td id="p-received"></td>
+              <th>Date Tested</th><td id="p-tested"></td></tr>
+          <tr><th>Used For</th><td colspan="3" id="p-used"></td></tr>
+        </table>
+
+        <div class="d-sect">2. Quality &amp; Test Evaluation</div>
+        <table id="p-table">
+          <thead><tr>
+            <th style="width:6%">No.</th><th>Test</th><th>Specification</th>
+            <th>In-house test method / COA</th><th>Results / reading</th><th style="width:11%">Pass / Fail</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="d-final">
+          <b>FINAL QUALITY STATUS</b>
+          <div class="fbox" id="p-final">PENDING</div>
+        </div>
+
+        <div class="d-sect">3. Comments / Remarks</div>
+        <div class="d-note" id="p-comments"></div>
+
+        <div class="d-sect">4. Sample Inspection Image</div>
+        <div class="d-img" id="p-photo">No inspection photo attached</div>
+
+        <div class="d-sign">
+          <div class="sb"><div class="sl"></div><strong>Analysed By</strong><br>
+            (<span id="p-an">Name</span>)<br><small>(<span id="p-anp">designation</span>)</small></div>
+          <div class="sb"><div class="sl"></div><strong>Reviewed &amp; Approved By</strong><br>
+            (<span id="p-ap">Name</span>)<br><small>(<span id="p-app">designation</span>)</small></div>
+        </div>
+
+        <div class="d-foot">
+          <span id="p-foot-code">—</span>
+          <span>Generated from HEMAS QA System</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="sheet" id="sheet">
+  <div class="sheet-box">
+    <h4 id="sheet-h">Are you sure?</h4>
+    <p id="sheet-p"></p>
+    <div class="sheet-act">
+      <button class="btn ghost sm" id="sheet-no">Cancel</button>
+      <button class="btn danger sm" id="sheet-yes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   HEMAS QA SYSTEM — application logic
+   ===================================================================== */
+
+/* ---- Live project. Both values are safe in client code: the publishable
+       key only ever reaches Postgres through row level security.
+       Never paste a service_role or secret key here. ------------------- */
+const BUILTIN_URL = "https://zfpnstacxwieooayrnoo.supabase.co";
+const BUILTIN_KEY = "sb_publishable_EQjzahCsZx7Am0jggH-gYw_H6YHE3xd";
+
+const $  = (id) => document.getElementById(id);
+const el = (sel, root = document) => root.querySelector(sel);
+
+const S = {
+  sb: null,
+  me: null,          // profile row
+  samples: [],
+  users: [],
+  view: 'dashboard',
+  editing: null,     // sample currently open in the drawer
+  photoData: null,   // dataURL of a newly picked photo
+  photoFile: null,
+};
+
+const ROLE_LABEL = { procurement:'Procurement', qa:'Quality Assurance', admin:'Administrator' };
+
+/* ---------------------------- helpers ------------------------------- */
+function toast(text, kind = 'ok') {
+  const t = $('toast');
+  t.textContent = text;
+  t.className = 'on ' + kind;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.className = ''; }, 3400);
+}
+function showMsg(id, text, kind = 'err') {
+  const m = $(id);
+  if (!text) { m.className = 'msg'; m.textContent = ''; return; }
+  m.className = 'msg ' + kind;
+  m.textContent = text;
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function today() { return new Date().toISOString().slice(0, 10); }
+function humanDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (isNaN(dt)) return '—';
+  return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+function shortDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (isNaN(dt)) return '—';
+  return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
+}
+function busy(btn, on, idleText) {
+  if (on) { btn.dataset.idle = btn.innerHTML; btn.innerHTML = '<i class="spin"></i>'; btn.disabled = true; }
+  else { btn.innerHTML = idleText || btn.dataset.idle || 'Done'; btn.disabled = false; }
+}
+function confirmAction(title, body, yesLabel, fn) {
+  $('sheet-h').textContent = title;
+  $('sheet-p').textContent = body;
+  $('sheet-yes').textContent = yesLabel;
+  $('sheet').classList.add('on');
+  $('sheet-yes').onclick = () => { $('sheet').classList.remove('on'); fn(); };
+}
+$('sheet-no').onclick = () => $('sheet').classList.remove('on');
+$('sheet').onclick = (e) => { if (e.target.id === 'sheet') $('sheet').classList.remove('on'); };
+
+const can = {
+  create: () => ['procurement','admin'].includes(S.me?.role),
+  test:   () => ['qa','admin'].includes(S.me?.role),
+  admin:  () => S.me?.role === 'admin',
+};
+
+/* ------------------------- boot / connection ------------------------ */
+function getCfg() {
+  if (BUILTIN_URL && BUILTIN_KEY) return { url: BUILTIN_URL, key: BUILTIN_KEY };
+  try { return JSON.parse(localStorage.getItem('hemas_qa_cfg') || 'null'); } catch { return null; }
+}
+
+async function boot() {
+  if (typeof supabase === 'undefined') {
+    document.body.innerHTML =
+      '<div class="gate"><div class="gate-card"><div class="gate-box">' +
+      '<h1 style="margin-top:0">Cannot reach Supabase</h1>' +
+      '<p class="sub">The Supabase library did not load. Check the internet connection, ' +
+      'then reload this page.</p></div></div></div>';
+    return;
+  }
+  const cfg = getCfg();
+  if (!cfg?.url || !cfg?.key) { $('screen-setup').style.display = 'flex'; return; }
+  S.sb = supabase.createClient(cfg.url, cfg.key);
+  const { data: { session } } = await S.sb.auth.getSession();
+  if (session) { await enterApp(); } else { $('screen-auth').style.display = 'flex'; }
+}
+
+$('btn-connect').onclick = async () => {
+  const url = $('cfg-url').value.trim().replace(/\/+$/, '');
+  const key = $('cfg-key').value.trim();
+  if (!/^https:\/\/.+\.supabase\.co$/.test(url)) {
+    return showMsg('setup-msg', 'That does not look like a project URL. It ends in .supabase.co');
+  }
+  if (key.length < 40) return showMsg('setup-msg', 'The anon key looks too short. Copy the whole value.');
+  localStorage.setItem('hemas_qa_cfg', JSON.stringify({ url, key }));
+  $('screen-setup').style.display = 'none';
+  boot();
+};
+
+/* -------------------------------- auth ------------------------------ */
+$('btn-login').onclick = signIn;
+$('log-pass').addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
+$('log-email').addEventListener('keydown', e => { if (e.key === 'Enter') $('log-pass').focus(); });
+
+async function signIn() {
+  const email = $('log-email').value.trim();
+  const password = $('log-pass').value;
+  if (!email || !password) return showMsg('auth-msg', 'Enter your email and password.');
+  showMsg('auth-msg', '');
+  busy($('btn-login'), true);
+  const { error } = await S.sb.auth.signInWithPassword({ email, password });
+  busy($('btn-login'), false, 'Sign in');
+  if (error) {
+    showMsg('auth-msg', error.message.includes('Invalid')
+      ? 'That email and password do not match an account.'
+      : error.message);
+    return;
+  }
+  $('screen-auth').style.display = 'none';
+  await enterApp();
+}
+
+$('btn-logout').onclick = async () => {
+  await S.sb.auth.signOut();
+  location.reload();
+};
+
+async function enterApp() {
+  const { data: { user } } = await S.sb.auth.getUser();
+  const { data: prof, error } = await S.sb
+    .from('profiles').select('*').eq('id', user.id).single();
+
+  if (error || !prof) {
+    await S.sb.auth.signOut();
+    $('screen-auth').style.display = 'flex';
+    return showMsg('auth-msg', 'No portal profile is linked to this account. Ask an admin to add you.');
+  }
+  if (prof.is_active === false) {
+    await S.sb.auth.signOut();
+    $('screen-auth').style.display = 'flex';
+    return showMsg('auth-msg', 'This account has been switched off. Contact an admin.');
+  }
+
+  S.me = prof;
+  $('me-name').textContent = prof.full_name || prof.email;
+  $('me-role').textContent = ROLE_LABEL[prof.role];
+  $('me-initials').textContent = (prof.full_name || prof.email || '?')
+    .split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+  buildNav();
+  $('screen-auth').style.display = 'none';
+  $('app').classList.add('on');
+
+  await loadSamples();
+  go(can.test() && !can.admin() ? 'queue' : 'dashboard');
+  if (can.admin()) loadUsers();
+}
+
+/* ------------------------------ navigation -------------------------- */
+const ICONS = {
+  dashboard:'<path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>',
+  intake:'<path d="M12 5v14M5 12h14"/>',
+  queue:'<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
+  records:'<path d="M4 6h16M4 12h16M4 18h10"/>',
+  users:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
+};
+const NAV = [
+  { id:'dashboard', label:'Dashboard',  short:'Home',    roles:['procurement','qa','admin'] },
+  { id:'intake',    label:'New sample', short:'New',     roles:['procurement','admin'] },
+  { id:'queue',     label:'Test queue', short:'Queue',   roles:['qa','admin'], badge:true },
+  { id:'records',   label:'Records',    short:'Records', roles:['procurement','qa','admin'] },
+  { id:'users',     label:'Users',      short:'Users',   roles:['admin'] },
+];
+
+function buildNav() {
+  const items = NAV.filter(n => n.roles.includes(S.me.role));
+  const mk = (n, mobile) => `
+    <button class="navbtn" data-go="${n.id}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">${ICONS[n.id]}</svg>
+      <span>${mobile ? n.short : n.label}</span>
+      ${n.badge ? `<span class="badge" id="badge-${mobile?'m':'d'}" style="display:none">0</span>` : ''}
+    </button>`;
+  $('nav-desktop').innerHTML = items.map(n => mk(n, false)).join('');
+  $('nav-mobile').innerHTML  = items.map(n => mk(n, true)).join('');
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+}
+
+function go(view) {
+  S.view = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
+  document.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === view));
+  window.scrollTo(0, 0);
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'queue')     renderQueue();
+  if (view === 'records')   renderRecords();
+  if (view === 'users')     renderUsers();
+}
+
+/* ------------------------------ data -------------------------------- */
+async function loadSamples() {
+  const { data, error } = await S.sb
+    .from('samples')
+    .select('*, submitter:submitted_by(full_name), tester:qa_user(full_name)')
+    .order('submitted_at', { ascending: false });
+  if (error) { toast('Could not load samples: ' + error.message, 'err'); return; }
+  S.samples = data || [];
+  const waiting = S.samples.filter(s => s.status === 'Awaiting QA').length;
+  ['badge-d','badge-m'].forEach(id => {
+    const b = $(id);
+    if (b) { b.textContent = waiting; b.style.display = waiting ? '' : 'none'; }
+  });
+}
+
+/* --------------------------- dashboard ------------------------------ */
+function renderDashboard() {
+  const s = S.samples;
+  const waiting  = s.filter(x => x.status === 'Awaiting QA').length;
+  const testing  = s.filter(x => x.status === 'Under Test').length;
+  const passed   = s.filter(x => x.final_status === 'PASS').length;
+  const failed   = s.filter(x => x.final_status === 'FAIL').length;
+  const decided  = passed + failed;
+  const passRate = decided ? Math.round(passed / decided * 100) : 0;
+
+  const turns = s.filter(x => x.date_tested && x.date_received)
+    .map(x => (new Date(x.date_tested) - new Date(x.date_received)) / 86400000)
+    .filter(d => d >= 0 && d < 400);
+  const avgTurn = turns.length ? (turns.reduce((a, b) => a + b, 0) / turns.length).toFixed(1) : '—';
+
+  $('dash-sub').textContent = s.length
+    ? `${s.length} samples logged, ${waiting + testing} still open.`
+    : 'Nothing logged yet.';
+
+  $('kpi-row').innerHTML = [
+    ['Total samples', s.length, 'All time', ''],
+    ['Awaiting QA', waiting, testing ? `${testing} under test` : 'Nothing in progress', 'a'],
+    ['Passed', passed, `${passRate}% of decided`, 't'],
+    ['Failed', failed, decided ? `${100 - passRate}% of decided` : 'None yet', 'r'],
+    ['Avg turnaround', avgTurn === '—' ? '—' : avgTurn + 'd', 'Received to tested', ''],
+  ].map(([l, v, sub, cls]) => `
+    <div class="kpi ${cls}">
+      <div class="k-label">${l}</div>
+      <div class="k-val">${v}</div>
+      <div class="k-sub">${sub}</div>
+    </div>`).join('');
+
+  drawBars(s);
+  drawDonut(waiting, testing, passed, failed);
+  drawSuppliers(s);
+  drawFeed(s);
+}
+
+function drawBars(s) {
+  const months = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key: d.toISOString().slice(0, 7),
+      label: d.toLocaleDateString('en-GB', { month: 'short' }),
+      pass: 0, fail: 0, wait: 0,
+    });
+  }
+  s.forEach(x => {
+    const k = (x.date_received || x.submitted_at || '').slice(0, 7);
+    const m = months.find(mm => mm.key === k);
+    if (!m) return;
+    if (x.final_status === 'PASS') m.pass++;
+    else if (x.final_status === 'FAIL') m.fail++;
+    else m.wait++;
+  });
+  const max = Math.max(1, ...months.map(m => m.pass + m.fail + m.wait));
+  $('chart-bars').innerHTML = months.map(m => {
+    const seg = (n, c) => n ? `<div class="bar-seg" style="height:${(n / max) * 100}%;background:${c}" title="${n}"></div>` : '';
+    return `<div class="bar-col">
+      <div class="bar-stack">
+        ${seg(m.wait, 'var(--amber)')}${seg(m.fail, 'var(--red)')}${seg(m.pass, 'var(--teal)')}
+      </div>
+      <div class="bar-label">${m.label}</div>
+    </div>`;
+  }).join('');
+}
+
+function drawDonut(waiting, testing, passed, failed) {
+  const parts = [
+    { n: passed,  c: 'var(--teal)',  l: 'Passed' },
+    { n: failed,  c: 'var(--red)',   l: 'Failed' },
+    { n: waiting, c: 'var(--amber)', l: 'Awaiting QA' },
+    { n: testing, c: '#7ba3ff',      l: 'Under test' },
+  ];
+  const total = parts.reduce((a, p) => a + p.n, 0);
+  const R = 44, C = 2 * Math.PI * R;
+  let off = 0;
+  const rings = total ? parts.filter(p => p.n).map(p => {
+    const len = (p.n / total) * C;
+    const seg = `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${p.c}" stroke-width="13"
+      stroke-dasharray="${len - 1.5} ${C - len + 1.5}" stroke-dashoffset="${-off}"
+      transform="rotate(-90 60 60)" stroke-linecap="butt"></circle>`;
+    off += len;
+    return seg;
+  }).join('') : `<circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--line)" stroke-width="13"></circle>`;
+
+  $('chart-donut').innerHTML = rings + `
+    <text x="60" y="58" text-anchor="middle" class="donut-mid">${total}</text>
+    <text x="60" y="72" text-anchor="middle" class="donut-sub">SAMPLES</text>`;
+
+  $('donut-key').innerHTML = parts.map(p => `
+    <div class="rankrow">
+      <span class="rname"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${p.c};margin-right:8px"></i>${p.l}</span>
+      <span class="rnum">${p.n}</span>
+    </div>`).join('');
+}
+
+function drawSuppliers(s) {
+  const map = {};
+  s.filter(x => x.final_status !== 'PENDING').forEach(x => {
+    const k = x.supplier_name || 'Unnamed';
+    map[k] = map[k] || { total: 0, fail: 0 };
+    map[k].total++;
+    if (x.final_status === 'FAIL') map[k].fail++;
+  });
+  const rows = Object.entries(map)
+    .map(([name, v]) => ({ name, ...v, rate: v.fail / v.total }))
+    .sort((a, b) => b.rate - a.rate || b.total - a.total)
+    .slice(0, 6);
+
+  $('supplier-rank').innerHTML = rows.length ? rows.map(r => `
+    <div class="rankrow">
+      <span class="rname" title="${esc(r.name)}">${esc(r.name)}</span>
+      <span class="rankbar"><i style="width:${Math.max(3, r.rate * 100)}%;background:${r.rate > 0 ? 'var(--red)' : 'var(--teal)'}"></i></span>
+      <span class="rnum">${Math.round(r.rate * 100)}% <span style="color:var(--faint)">/${r.total}</span></span>
+    </div>`).join('')
+    : '<div style="color:var(--mut);font-size:13px;padding:8px 0">No released results yet.</div>';
+}
+
+function drawFeed(s) {
+  const rows = s.slice(0, 6);
+  $('recent-feed').innerHTML = rows.length ? rows.map(x => `
+    <div class="rankrow">
+      <span class="rname">
+        <span class="mono" style="color:var(--teal);font-size:11px">${esc(x.sample_code || '')}</span>
+        &nbsp;${esc(x.material_description)}
+      </span>
+      ${statusPill(x)}
+    </div>`).join('')
+    : '<div style="color:var(--mut);font-size:13px;padding:8px 0">Nothing logged yet.</div>';
+}
+
+/* --------------------------- shared bits ---------------------------- */
+function statusPill(x) {
+  if (x.status === 'Awaiting QA') return '<span class="pill p-wait">Awaiting QA</span>';
+  if (x.status === 'Under Test')  return '<span class="pill p-test">Under test</span>';
+  if (x.final_status === 'PASS')  return '<span class="pill p-pass">Passed</span>';
+  if (x.final_status === 'FAIL')  return '<span class="pill p-fail">Failed</span>';
+  return '<span class="pill p-test">Released</span>';
+}
+
+function recCard(x) {
+  return `
+  <button class="rec" data-open="${x.id}">
+    <div>
+      <div class="rec-code">${esc(x.sample_code || '')} · ${esc(x.material_type)}</div>
+      <div class="rec-title">${esc(x.material_description)}</div>
+      <div class="rec-meta">
+        <span><b>Supplier</b>${esc(x.supplier_name)}</span>
+        <span><b>Received</b>${humanDate(x.date_received)}</span>
+        ${x.batch_no ? `<span><b>Batch</b>${esc(x.batch_no)}</span>` : ''}
+        ${x.date_tested ? `<span><b>Tested</b>${humanDate(x.date_tested)}</span>` : ''}
+      </div>
+    </div>
+    <div class="rec-right">
+      ${x.priority === 'Urgent' && x.status !== 'Released' ? '<span class="pill p-urg">Urgent</span>' : ''}
+      ${statusPill(x)}
+      <span class="mono" style="font-size:10px;color:var(--faint)">
+        ${(x.test_results || []).length} test${(x.test_results || []).length === 1 ? '' : 's'}
+      </span>
+    </div>
+  </button>`;
+}
+
+function wireCards(root) {
+  root.querySelectorAll('[data-open]').forEach(b => {
+    b.onclick = () => openReport(b.dataset.open);
+  });
+}
+
+function emptyState(icon, title, body, actionId, actionText) {
+  return `<div class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${icon}</svg>
+    <b>${title}</b><p>${body}</p>
+    ${actionId ? `<button class="btn sm" id="${actionId}">${actionText}</button>` : ''}
+  </div>`;
+}
+
+/* ------------------------------ intake ------------------------------ */
+$('in-received').value = today();
+
+$('btn-intake-clear').onclick = () => {
+  ['in-desc','in-supplier','in-rnd','in-size','in-batch','in-used','in-notes']
+    .forEach(id => $(id).value = '');
+  $('in-received').value = today();
+  $('in-priority').value = 'Normal';
+  toast('Form cleared.');
+};
+
+$('btn-intake-save').onclick = async () => {
+  const row = {
+    doc_ref: $('in-docref').value.trim() || 'QA-STR-01',
+    material_type: $('in-type').value,
+    material_description: $('in-desc').value.trim(),
+    rnd_ref: $('in-rnd').value.trim(),
+    supplier_name: $('in-supplier').value.trim(),
+    sample_size: $('in-size').value.trim(),
+    date_received: $('in-received').value || today(),
+    batch_no: $('in-batch').value.trim(),
+    used_for: $('in-used').value.trim(),
+    intake_notes: $('in-notes').value.trim(),
+    priority: $('in-priority').value,
+    submitted_by: S.me.id,
+  };
+  const missing = [];
+  if (!row.material_description) missing.push('material description');
+  if (!row.supplier_name) missing.push('supplier name');
+  if (!row.sample_size) missing.push('sample size');
+  if (!row.used_for) missing.push('what it is used for');
+  if (missing.length) return toast('Still needed: ' + missing.join(', '), 'err');
+
+  busy($('btn-intake-save'), true);
+  const { data, error } = await S.sb.from('samples').insert(row).select().single();
+  busy($('btn-intake-save'), false, 'Send to QA');
+  if (error) return toast(error.message, 'err');
+
+  toast(`${data.sample_code} sent to QA.`);
+  $('btn-intake-clear').click();
+  await loadSamples();
+};
+
+/* ------------------------------ queue ------------------------------- */
+function renderQueue() {
+  const open = S.samples.filter(x => x.status !== 'Released')
+    .sort((a, b) => (b.priority === 'Urgent') - (a.priority === 'Urgent')
+      || new Date(a.date_received) - new Date(b.date_received));
+  const box = $('queue-list');
+  box.innerHTML = open.length
+    ? open.map(recCard).join('')
+    : emptyState('<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
+        'The queue is clear', 'Every sample handed over has been tested and released.');
+  wireCards(box);
+}
+
+/* ----------------------------- records ------------------------------ */
+['f-search','f-status','f-result','f-type'].forEach(id =>
+  $(id).addEventListener('input', renderRecords));
+
+function filtered() {
+  const q = $('f-search').value.trim().toLowerCase();
+  const st = $('f-status').value, rs = $('f-result').value, tp = $('f-type').value;
+  return S.samples.filter(x => {
+    if (st && x.status !== st) return false;
+    if (rs && x.final_status !== rs) return false;
+    if (tp && x.material_type !== tp) return false;
+    if (!q) return true;
+    return [x.sample_code, x.material_description, x.supplier_name, x.batch_no, x.used_for, x.rnd_ref]
+      .join(' ').toLowerCase().includes(q);
+  });
+}
+
+function renderRecords() {
+  const list = filtered();
+  const box = $('rec-list');
+  box.innerHTML = list.length
+    ? list.map(recCard).join('')
+    : emptyState('<path d="M4 6h16M4 12h16M4 18h10"/>',
+        S.samples.length ? 'Nothing matches those filters' : 'No samples yet',
+        S.samples.length ? 'Try a different search or clear the filters.'
+                         : 'Samples appear here once procurement hands them over.');
+  wireCards(box);
+}
+
+$('btn-export').onclick = () => {
+  const rows = filtered();
+  if (!rows.length) return toast('Nothing to export with these filters.', 'err');
+  const head = ['Sample code','Doc ref','Material type','Description','Supplier','R&D ref','Sample size',
+    'Batch','Used for','Date received','Date tested','Stage','Final status','Tests','Comments',
+    'Analysed by','Approved by'];
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const body = rows.map(x => [
+    x.sample_code, x.doc_ref, x.material_type, x.material_description, x.supplier_name, x.rnd_ref,
+    x.sample_size, x.batch_no, x.used_for, x.date_received, x.date_tested, x.status, x.final_status,
+    (x.test_results || []).map(t => `${t.test}: ${t.result} (${t.status || '-'})`).join(' | '),
+    x.comments, x.analyzed_by, x.approved_by,
+  ].map(cell).join(','));
+  const csv = [head.map(cell).join(','), ...body].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = `HEMAS_QA_samples_${today()}.csv`;
+  a.click();
+  toast(`${rows.length} records exported.`);
+};
+
+/* ---------------------------- report drawer ------------------------- */
+function openReport(id) {
+  const x = S.samples.find(s => s.id === id);
+  if (!x) return;
+  S.editing = x;
+  S.photoData = null;
+  S.photoFile = null;
+
+  $('dr-title').textContent = x.material_description;
+  $('dr-code').textContent = `${x.sample_code} · ${x.supplier_name}`;
+
+  $('dr-intake').innerHTML = [
+    ['Sample code', x.sample_code],
+    ['Material type', x.material_type],
+    ['Supplier', x.supplier_name],
+    ['Sample size', x.sample_size],
+    ['Batch / lot', x.batch_no],
+    ['R&D reference', x.rnd_ref],
+    ['Used for', x.used_for],
+    ['Date received', humanDate(x.date_received)],
+    ['Handed over by', x.submitter?.full_name],
+    ['Note to QA', x.intake_notes],
+  ].filter(([, v]) => v).map(([k, v]) => `
+    <div class="rankrow" style="padding:7px 0">
+      <span class="rname" style="color:var(--mut)">${k}</span>
+      <span style="text-align:right;font-size:12.5px;max-width:60%">${esc(v)}</span>
+    </div>`).join('');
+
+  $('dr-tested').value = x.date_tested || today();
+  $('dr-comments').value = x.comments || '';
+  $('dr-an').value = x.analyzed_by || (can.test() ? S.me.full_name : '');
+  $('dr-anp').value = x.analyzed_by_post || (can.test() ? S.me.designation : '');
+  $('dr-ap').value = x.approved_by || '';
+  $('dr-app').value = x.approved_by_post || '';
+
+  setFinal(x.final_status || 'PENDING');
+
+  const rows = (x.test_results || []);
+  $('dr-rows').innerHTML = '';
+  if (rows.length) rows.forEach(addRow);
+  else for (let i = 0; i < 4; i++) addRow();
+
+  $('dr-photo-box').innerHTML = x.photo_path
+    ? `<img src="${esc(x.photo_path)}" alt="Sample photo">`
+    : '<span>Tap to add a photo of the sample</span>';
+
+  const editable = can.test();
+  $('dpane-form').querySelectorAll('input,select,textarea,#btn-addrow,#btn-release')
+    .forEach(n => { n.disabled = !editable; });
+  $('btn-save-report').style.display = editable ? '' : 'none';
+  $('btn-release').style.display = editable ? '' : 'none';
+  $('btn-delete-sample').style.display = can.admin() ? '' : 'none';
+  $('dr-photo-box').style.pointerEvents = editable ? '' : 'none';
+
+  drawChain(x);
+  syncPreview();
+  $('drawer').classList.add('on');
+  $('drawer').classList.remove('preview');
+  $('btn-swap').textContent = 'Preview';
+  $('dpane-form').scrollTop = 0;
+}
+
+function drawChain(x) {
+  const nodes = [
+    { t: 'Received', d: shortDate(x.date_received), state: 'done' },
+    { t: 'Under test', d: x.date_tested ? shortDate(x.date_tested) : 'pending',
+      state: x.date_tested ? 'done' : (x.status === 'Awaiting QA' ? 'now' : 'done') },
+    { t: x.final_status === 'FAIL' ? 'Rejected' : 'Released',
+      d: x.released_at ? shortDate(x.released_at) : 'pending',
+      state: x.status === 'Released' ? (x.final_status === 'FAIL' ? 'fail' : 'done')
+            : (x.date_tested ? 'now' : '') },
+  ];
+  $('dr-chain').innerHTML = nodes.map(n => `
+    <div class="chain-node ${n.state}">
+      <div class="dot"></div>
+      <div class="cn-t">${n.t}</div>
+      <div class="cn-d">${n.d}</div>
+    </div>`).join('');
+}
+
+$('btn-close-drawer').onclick = () => { $('drawer').classList.remove('on'); S.editing = null; };
+$('btn-swap').onclick = () => {
+  const d = $('drawer');
+  d.classList.toggle('preview');
+  $('btn-swap').textContent = d.classList.contains('preview') ? 'Edit' : 'Preview';
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('drawer').classList.contains('on')) $('btn-close-drawer').click();
+});
+
+/* ---- test rows ---- */
+function addRow(data = {}) {
+  const wrap = document.createElement('div');
+  wrap.className = 'trow';
+  wrap.innerHTML = `
+    <span class="tn"></span>
+    <input class="c-test"   placeholder="Test"          value="${esc(data.test || '')}">
+    <input class="c-spec"   placeholder="Specification" value="${esc(data.spec || '')}">
+    <input class="c-method" placeholder="Method / COA"  value="${esc(data.method || '')}">
+    <input class="c-result" placeholder="Reading"       value="${esc(data.result || '')}">
+    <select class="c-status">
+      <option value="">Result</option>
+      <option value="Pass"${data.status === 'Pass' ? ' selected' : ''}>Pass</option>
+      <option value="Fail"${data.status === 'Fail' ? ' selected' : ''}>Fail</option>
+    </select>
+    <button class="tx" title="Remove this test">×</button>`;
+  wrap.querySelector('.tx').onclick = () => { wrap.remove(); numberRows(); syncPreview(); };
+  wrap.querySelectorAll('input,select').forEach(n => n.addEventListener('input', syncPreview));
+  $('dr-rows').appendChild(wrap);
+  numberRows();
+  if (!can.test()) wrap.querySelectorAll('input,select,button').forEach(n => n.disabled = true);
+}
+function numberRows() {
+  [...$('dr-rows').children].forEach((r, i) => r.querySelector('.tn').textContent = i + 1);
+}
+$('btn-addrow').onclick = () => { addRow(); syncPreview(); };
+
+function collectRows() {
+  return [...$('dr-rows').children].map(r => ({
+    test:   r.querySelector('.c-test').value.trim(),
+    spec:   r.querySelector('.c-spec').value.trim(),
+    method: r.querySelector('.c-method').value.trim(),
+    result: r.querySelector('.c-result').value.trim(),
+    status: r.querySelector('.c-status').value,
+  })).filter(t => t.test || t.spec || t.result);
+}
+
+/* ---- final status buttons ---- */
+let finalStatus = 'PENDING';
+function setFinal(v) {
+  finalStatus = v;
+  $('dr-statusbar').querySelectorAll('button')
+    .forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  syncPreview();
+}
+$('dr-statusbar').querySelectorAll('button').forEach(b => {
+  b.onclick = () => { if (can.test()) setFinal(b.dataset.v); };
+});
+
+/* ---- photo ---- */
+$('dr-photo').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (f.size > 6 * 1024 * 1024) return toast('That image is over 6 MB. Use a smaller one.', 'err');
+  const rd = new FileReader();
+  rd.onload = ev => {
+    S.photoData = ev.target.result;
+    S.photoFile = f;
+    $('dr-photo-box').innerHTML = `<img src="${ev.target.result}" alt="Sample photo">`;
+    syncPreview();
+  };
+  rd.readAsDataURL(f);
+});
+
+/* ---- live A4 preview ---- */
+['dr-tested','dr-comments','dr-an','dr-anp','dr-ap','dr-app']
+  .forEach(id => $(id).addEventListener('input', syncPreview));
+
+function syncPreview() {
+  const x = S.editing;
+  if (!x) return;
+  $('p-title').textContent = x.material_type === 'Packing Material'
+    ? 'SAMPLE PACKING MATERIAL TESTING REPORT'
+    : 'SAMPLE RAW MATERIAL TESTING REPORT';
+  $('p-docref').textContent  = x.doc_ref || 'QA-STR-01';
+  $('p-code').textContent    = x.sample_code || '—';
+  $('p-foot-code').textContent = `${x.sample_code || ''} · ${x.doc_ref || ''}`;
+  $('p-printed').textContent = humanDate(today());
+  $('p-type').textContent     = x.material_type;
+  $('p-supplier').textContent = x.supplier_name || '';
+  $('p-desc').textContent     = x.material_description || '';
+  $('p-size').textContent     = x.sample_size || '';
+  $('p-rnd').textContent      = x.rnd_ref || '';
+  $('p-batch').textContent    = x.batch_no || '';
+  $('p-received').textContent = humanDate(x.date_received);
+  $('p-tested').textContent   = $('dr-tested').value ? humanDate($('dr-tested').value) : '';
+  $('p-used').textContent     = x.used_for || '';
+  $('p-comments').textContent = $('dr-comments').value;
+  $('p-an').textContent   = $('dr-an').value  || 'Name';
+  $('p-anp').textContent  = $('dr-anp').value || 'designation';
+  $('p-ap').textContent   = $('dr-ap').value  || 'Name';
+  $('p-app').textContent  = $('dr-app').value || 'designation';
+
+  const box = $('p-final');
+  box.className = 'fbox' + (finalStatus === 'PASS' ? ' pass' : finalStatus === 'FAIL' ? ' fail' : '');
+  box.textContent = finalStatus === 'PASS' ? '\u2713 PASS' : finalStatus === 'FAIL' ? '\u2717 FAIL' : 'PENDING';
+
+  const tb = el('#p-table tbody');
+  const rows = collectRows();
+  tb.innerHTML = rows.length ? rows.map((t, i) => `
+    <tr class="${t.status === 'Fail' ? 'fail-r' : ''}">
+      <td>${i + 1}</td><td>${esc(t.test)}</td><td>${esc(t.spec)}</td>
+      <td>${esc(t.method)}</td><td>${esc(t.result)}</td>
+      <td style="font-weight:600">${esc(t.status)}</td>
+    </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:#999">No tests recorded</td></tr>';
+
+  const img = S.photoData || x.photo_path;
+  $('p-photo').innerHTML = img
+    ? `<img src="${esc(img)}" alt="Sample inspection photo">`
+    : 'No inspection photo attached';
+}
+
+/* ---- save / release / delete ---- */
+async function persist(release) {
+  const x = S.editing;
+  if (!x) return;
+  const rows = collectRows();
+
+  if (release) {
+    const gaps = [];
+    if (!rows.length) gaps.push('at least one test');
+    if (finalStatus === 'PENDING') gaps.push('a final pass or fail');
+    if (!$('dr-an').value.trim()) gaps.push('who analysed it');
+    if (!$('dr-ap').value.trim()) gaps.push('who approved it');
+    if (gaps.length) return toast('Before releasing, add: ' + gaps.join(', '), 'err');
+  }
+
+  const btn = release ? $('btn-release') : $('btn-save-report');
+  busy(btn, true);
+
+  let photo_path = x.photo_path;
+  if (S.photoFile) {
+    const ext = (S.photoFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${x.id}/${Date.now()}.${ext}`;
+    const up = await S.sb.storage.from('sample-photos')
+      .upload(path, S.photoFile, { upsert: true, contentType: S.photoFile.type });
+    if (up.error) {
+      busy(btn, false, release ? 'Save and release report' : 'Save results');
+      return toast('Photo did not upload: ' + up.error.message, 'err');
+    }
+    photo_path = S.sb.storage.from('sample-photos').getPublicUrl(path).data.publicUrl;
+  }
+
+  const patch = {
+    date_tested: $('dr-tested').value || null,
+    test_results: rows,
+    final_status: finalStatus,
+    comments: $('dr-comments').value.trim(),
+    analyzed_by: $('dr-an').value.trim(),
+    analyzed_by_post: $('dr-anp').value.trim(),
+    approved_by: $('dr-ap').value.trim(),
+    approved_by_post: $('dr-app').value.trim(),
+    qa_user: S.me.id,
+    photo_path,
+    status: release ? 'Released' : (x.status === 'Released' ? 'Released' : 'Under Test'),
+  };
+
+  const { error } = await S.sb.from('samples').update(patch).eq('id', x.id);
+  busy(btn, false, release ? 'Save and release report' : 'Save results');
+  if (error) return toast(error.message, 'err');
+
+  toast(release ? `${x.sample_code} released.` : 'Results saved.');
+  S.photoFile = null;
+  await loadSamples();
+  S.editing = S.samples.find(s => s.id === x.id);
+  drawChain(S.editing);
+  if (release) { $('drawer').classList.remove('on'); go(S.view); }
+  else { go(S.view); }
+}
+$('btn-save-report').onclick = () => persist(false);
+$('btn-release').onclick     = () => persist(true);
+
+$('btn-delete-sample').onclick = () => {
+  const x = S.editing;
+  confirmAction('Delete this sample?',
+    `${x.sample_code} and its results will be removed for everyone. This cannot be undone.`,
+    'Delete', async () => {
+      const { error } = await S.sb.from('samples').delete().eq('id', x.id);
+      if (error) return toast(error.message, 'err');
+      toast(`${x.sample_code} deleted.`);
+      $('drawer').classList.remove('on');
+      await loadSamples();
+      go(S.view);
+    });
+};
+
+/* ---- PDF ---- */
+$('btn-pdf').onclick = () => {
+  const x = S.editing;
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed;left:-12000px;top:0;background:#fff';
+  const clone = $('doc').cloneNode(true);
+  clone.style.boxShadow = 'none';
+  clone.removeAttribute('id');
+  clone.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
+
+  busy($('btn-pdf'), true);
+  html2pdf().set({
+    margin: [4, 0, 4, 0],
+    filename: `${x.sample_code || 'Material'}_Testing_Report.pdf`,
+    image: { type: 'jpeg', quality: 0.97 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  }).from(clone).save().then(() => {
+    holder.remove();
+    busy($('btn-pdf'), false, 'PDF');
+  }).catch(err => {
+    holder.remove();
+    busy($('btn-pdf'), false, 'PDF');
+    toast('The PDF could not be built: ' + err.message, 'err');
+  });
+};
+
+/* ------------------------------ users ------------------------------- */
+async function loadUsers() {
+  const { data, error } = await S.sb.from('profiles').select('*').order('created_at');
+  if (error) return;
+  S.users = data || [];
+  if (S.view === 'users') renderUsers();
+}
+
+function renderUsers() {
+  $('user-rows').innerHTML = S.users.map(u => `
+    <tr>
+      <td data-l="Name">
+        <div>
+          <b style="font-weight:600">${esc(u.full_name || '—')}</b>
+          <div style="font-size:11.5px;color:var(--mut)">${esc(u.email || '')}</div>
+        </div>
+      </td>
+      <td data-l="Designation"><span style="color:var(--mut)">${esc(u.designation || '—')}</span></td>
+      <td data-l="Role">
+        <select data-role="${u.id}" style="padding:6px 9px;background:var(--sink);border:1px solid var(--line);border-radius:5px;font-size:12.5px">
+          <option value="procurement"${u.role === 'procurement' ? ' selected' : ''}>Procurement</option>
+          <option value="qa"${u.role === 'qa' ? ' selected' : ''}>QA</option>
+          <option value="admin"${u.role === 'admin' ? ' selected' : ''}>Admin</option>
+        </select>
+      </td>
+      <td data-l="Access">
+        <button class="pill ${u.is_active ? 'p-pass' : 'p-fail'}" data-toggle="${u.id}">
+          ${u.is_active ? 'Active' : 'Switched off'}
+        </button>
+      </td>
+      <td data-l="">
+        ${u.id === S.me.id
+          ? '<span style="font-size:11.5px;color:var(--faint)">That is you</span>'
+          : `<button class="btn danger sm" data-del="${u.id}">Remove</button>`}
+      </td>
+    </tr>`).join('');
+
+  $('user-rows').querySelectorAll('[data-role]').forEach(sel => {
+    sel.onchange = async () => {
+      const { error } = await S.sb.from('profiles')
+        .update({ role: sel.value }).eq('id', sel.dataset.role);
+      if (error) return toast(error.message, 'err');
+      toast('Role updated.');
+      loadUsers();
+    };
+  });
+
+  $('user-rows').querySelectorAll('[data-toggle]').forEach(b => {
+    b.onclick = async () => {
+      const u = S.users.find(x => x.id === b.dataset.toggle);
+      const { error } = await S.sb.from('profiles')
+        .update({ is_active: !u.is_active }).eq('id', u.id);
+      if (error) return toast(error.message, 'err');
+      toast(u.is_active ? 'Access switched off.' : 'Access restored.');
+      loadUsers();
+    };
+  });
+
+  $('user-rows').querySelectorAll('[data-del]').forEach(b => {
+    b.onclick = () => {
+      const u = S.users.find(x => x.id === b.dataset.del);
+      confirmAction('Remove this user?',
+        `${u.full_name || u.email} will lose access immediately. Samples they logged stay in the register.`,
+        'Remove', async () => {
+          const { data, error } = await S.sb.functions.invoke('admin-users', {
+            body: { action: 'delete', id: u.id },
+          });
+          if (error || data?.error) {
+            return toast(data?.error || 'The admin-users function is not reachable. Deploy it, or switch the account off instead.', 'err');
+          }
+          toast('User removed.');
+          loadUsers();
+        });
+    };
+  });
+}
+
+$('btn-adduser').onclick = async () => {
+  const payload = {
+    action: 'create',
+    full_name: $('u-name').value.trim(),
+    email: $('u-email').value.trim(),
+    designation: $('u-post').value.trim(),
+    role: $('u-role').value,
+    password: $('u-pass').value,
+  };
+  if (!payload.full_name || !payload.email) return showMsg('user-msg', 'Name and email are both needed.');
+  if (payload.password.length < 8) return showMsg('user-msg', 'Use a password of at least 8 characters.');
+  showMsg('user-msg', '');
+
+  busy($('btn-adduser'), true);
+  const { data, error } = await S.sb.functions.invoke('admin-users', { body: payload });
+  busy($('btn-adduser'), false, 'Add user');
+
+  if (error || data?.error) {
+    return showMsg('user-msg', data?.error
+      || 'The admin-users edge function did not respond. Deploy it from the project folder, then try again.');
+  }
+  showMsg('user-msg', `${payload.full_name} can now sign in.`, 'ok');
+  ['u-name','u-email','u-post','u-pass'].forEach(id => $(id).value = '');
+  loadUsers();
+};
+
+/* ------------------------------- go --------------------------------- */
+boot();
+</script>
+</body>
+</html>
