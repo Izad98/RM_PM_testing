@@ -1180,9 +1180,13 @@ async function signUp() {
   busy($('btn-signup'), false, 'Create account');
 
   if (error) {
-    return showMsg('signup-msg', error.message.includes('already registered') || error.message.includes('already been registered')
-      ? 'An account with that email already exists. Try signing in instead.'
-      : error.message);
+    let friendly = error.message;
+    if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+      friendly = 'An account with that email already exists. Try signing in instead.';
+    } else if (error.message.includes('rate limit')) {
+      friendly = 'Too many sign-up attempts right now. Please wait a few minutes and try again.';
+    }
+    return showMsg('signup-msg', friendly);
   }
 
   ['su-name','su-email','su-post','su-pass','su-pass2'].forEach(id => $(id).value = '');
