@@ -3,8 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#101319">
+<meta name="theme-color" content="#101319" id="meta-theme-color">
 <title>HEMAS QA System — Material Testing Portal</title>
+<script>
+/* Apply saved theme before first paint to avoid a flash of the wrong colors. */
+(function(){
+  try{
+    var t = localStorage.getItem('hemas_qa_theme');
+    if(!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -22,12 +32,40 @@
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --r:6px;
 }
+:root[data-theme="light"]{
+  --ink:#f3f5f8; --panel:#ffffff; --raise:#eef1f5; --sink:#f7f8fa;
+  --line:#dbe1ea; --line-soft:#e6eaf0;
+  --teal:#0d8f75; --teal-dim:#0a6d59; --teal-glow:rgba(13,143,117,.10);
+  --amber:#b3760f; --amber-glow:rgba(179,118,15,.12);
+  --red:#c8382f; --red-glow:rgba(200,56,47,.10);
+  --txt:#161a22; --mut:#5b6577; --faint:#8792a3;
+}
+:root[data-theme="light"] .brand-mark{color:#161a22}
+:root[data-theme="light"] .gate{
+  background:
+    radial-gradient(700px 380px at 50% -10%,rgba(13,143,117,.08),transparent 70%),
+    var(--ink);
+}
+:root[data-theme="light"] .doc{box-shadow:0 3px 26px rgba(0,0,0,.18)}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
   background:var(--ink); color:var(--txt); font-family:var(--sans);
   font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  transition:background-color .15s,color .15s;
 }
+.theme-toggle{
+  width:34px;height:34px;border-radius:8px;background:var(--raise);border:1px solid var(--line);
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--mut);
+  transition:color .15s,border-color .15s;
+}
+.theme-toggle:hover{color:var(--teal);border-color:var(--teal-dim)}
+.theme-toggle svg{width:17px;height:17px}
+.theme-toggle .i-sun{display:none}
+:root[data-theme="light"] .theme-toggle .i-sun{display:block}
+:root[data-theme="light"] .theme-toggle .i-moon{display:none}
+.gate-top{position:absolute;top:18px;right:18px}
+@media(max-width:520px){.gate-top{top:12px;right:12px}}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 button{cursor:pointer;border:none;background:none}
 a{color:var(--teal)}
@@ -455,6 +493,10 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
 
 <!-- ============ 1. CONNECT TO SUPABASE (first run only) ============ -->
 <div class="gate" id="screen-setup" style="display:none">
+  <div class="gate-top"><button class="theme-toggle" id="theme-toggle-setup" title="Switch theme" aria-label="Switch theme">
+    <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button></div>
   <div class="gate-card">
     <div class="gate-brand">
       <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
@@ -479,6 +521,10 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
 
 <!-- ============ 2. SIGN IN ============ -->
 <div class="gate" id="screen-auth" style="display:none">
+  <div class="gate-top"><button class="theme-toggle" id="theme-toggle-auth" title="Switch theme" aria-label="Switch theme">
+    <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button></div>
   <div class="gate-card">
     <div class="gate-brand">
       <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
@@ -496,6 +542,59 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <input id="log-pass" type="password" autocomplete="current-password" placeholder="••••••••">
       </div>
       <button class="btn" style="width:100%" id="btn-login">Sign in</button>
+      <p style="text-align:center;margin:16px 0 0;font-size:12.5px;color:var(--mut)">
+        New to the portal? <a href="#" id="link-to-signup">Create an account</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. CREATE ACCOUNT (self-service, Procurement / QA) ============ -->
+<div class="gate" id="screen-signup" style="display:none">
+  <div class="gate-top"><button class="theme-toggle" id="theme-toggle-signup" title="Switch theme" aria-label="Switch theme">
+    <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button></div>
+  <div class="gate-card">
+    <div class="gate-brand">
+      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
+    </div>
+    <h1>Create your account</h1>
+    <p class="sub">Sign up as Procurement or QA. An admin reviews and approves every new account before it can sign in.</p>
+    <div class="gate-box">
+      <div class="msg" id="signup-msg"></div>
+      <div class="field">
+        <label class="req">Full name</label>
+        <input id="su-name" autocomplete="name" placeholder="e.g. Nadeesha Perera">
+      </div>
+      <div class="field">
+        <label class="req">Work email</label>
+        <input id="su-email" type="email" autocomplete="username" placeholder="name@hemas.com">
+      </div>
+      <div class="field">
+        <label>Designation</label>
+        <input id="su-post" autocomplete="organization-title" placeholder="e.g. Procurement Executive">
+      </div>
+      <div class="field">
+        <label class="req">Role</label>
+        <select id="su-role">
+          <option value="procurement">Procurement — hands samples to QA</option>
+          <option value="qa">QA — records and releases results</option>
+        </select>
+        <div class="hint">Admin access is granted by an existing administrator after sign-up.</div>
+      </div>
+      <div class="field">
+        <label class="req">Password</label>
+        <input id="su-pass" type="password" autocomplete="new-password" placeholder="At least 8 characters">
+      </div>
+      <div class="field">
+        <label class="req">Confirm password</label>
+        <input id="su-pass2" type="password" autocomplete="new-password" placeholder="Retype your password">
+      </div>
+      <button class="btn" style="width:100%" id="btn-signup">Create account</button>
+      <p style="text-align:center;margin:16px 0 0;font-size:12.5px;color:var(--mut)">
+        Already approved? <a href="#" id="link-to-login">Sign in</a>
+      </p>
     </div>
   </div>
 </div>
@@ -508,6 +607,10 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
       <small>Raw &amp; packing material testing portal</small>
     </div>
     <div class="who">
+      <button class="theme-toggle" id="theme-toggle-app" title="Switch theme" aria-label="Switch theme">
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
       <div class="who-txt"><b id="me-name">—</b><span id="me-role">—</span></div>
       <div class="avatar" id="me-initials">–</div>
       <button class="btn ghost sm" id="btn-logout" title="Sign out">
@@ -683,7 +786,11 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <div class="page-head">
           <div class="eyebrow">Administration</div>
           <h2>Portal users</h2>
-          <p>Add people to the portal and set what they are allowed to do.</p>
+          <p>Approve self sign-ups and set what people are allowed to do.</p>
+        </div>
+        <div class="card" style="margin-bottom:14px" id="pending-card">
+          <h3>Pending approval</h3>
+          <div id="pending-rows"></div>
         </div>
         <div class="two-col" style="grid-template-columns:1fr 340px">
           <div class="card">
@@ -693,7 +800,10 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
             </div>
           </div>
           <div class="card" style="align-self:start">
-            <h3>Add a user</h3>
+            <h3>Add a user directly</h3>
+            <p style="margin:-6px 0 14px;font-size:12px;color:var(--mut)">
+              Skips the approval queue — mainly for creating other Admin accounts, which can't self sign-up.
+            </p>
             <div class="msg" id="user-msg"></div>
             <div class="field"><label class="req">Full name</label><input id="u-name"></div>
             <div class="field"><label class="req">Work email</label><input id="u-email" type="email"></div>
@@ -898,6 +1008,24 @@ const BUILTIN_KEY = "sb_publishable_EQjzahCsZx7Am0jggH-gYw_H6YHE3xd";
 const $  = (id) => document.getElementById(id);
 const el = (sel, root = document) => root.querySelector(sel);
 
+/* ---------------------------- theme --------------------------------- */
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('hemas_qa_theme', t);
+  $('meta-theme-color').setAttribute('content', t === 'light' ? '#f3f5f8' : '#101319');
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+}
+['theme-toggle-setup','theme-toggle-auth','theme-toggle-signup','theme-toggle-app'].forEach(id => {
+  $(id).onclick = toggleTheme;
+});
+
+/* -------------------------- gate screens ----------------------------- */
+function showGate(id) {
+  ['screen-setup','screen-auth','screen-signup'].forEach(g => { $(g).style.display = g === id ? 'flex' : 'none'; });
+}
+
 const S = {
   sb: null,
   me: null,          // profile row
@@ -978,10 +1106,10 @@ async function boot() {
     return;
   }
   const cfg = getCfg();
-  if (!cfg?.url || !cfg?.key) { $('screen-setup').style.display = 'flex'; return; }
+  if (!cfg?.url || !cfg?.key) { showGate('screen-setup'); return; }
   S.sb = supabase.createClient(cfg.url, cfg.key);
   const { data: { session } } = await S.sb.auth.getSession();
-  if (session) { await enterApp(); } else { $('screen-auth').style.display = 'flex'; }
+  if (session) { await enterApp(); } else { showGate('screen-auth'); }
 }
 
 $('btn-connect').onclick = async () => {
@@ -1001,6 +1129,9 @@ $('btn-login').onclick = signIn;
 $('log-pass').addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
 $('log-email').addEventListener('keydown', e => { if (e.key === 'Enter') $('log-pass').focus(); });
 
+$('link-to-signup').onclick = (e) => { e.preventDefault(); showMsg('signup-msg', ''); showGate('screen-signup'); };
+$('link-to-login').onclick  = (e) => { e.preventDefault(); showMsg('auth-msg', ''); showGate('screen-auth'); };
+
 async function signIn() {
   const email = $('log-email').value.trim();
   const password = $('log-pass').value;
@@ -1019,6 +1150,46 @@ async function signIn() {
   await enterApp();
 }
 
+/* ----------------------- self-service sign-up ------------------------ */
+$('btn-signup').onclick = signUp;
+['su-pass','su-pass2'].forEach(id =>
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') signUp(); }));
+
+async function signUp() {
+  const full_name = $('su-name').value.trim();
+  const email = $('su-email').value.trim();
+  const designation = $('su-post').value.trim();
+  const role = $('su-role').value; // constrained to procurement/qa by the <select>; the server-side trigger re-enforces this
+  const pass = $('su-pass').value;
+  const pass2 = $('su-pass2').value;
+
+  if (!full_name || !email) return showMsg('signup-msg', 'Name and work email are both needed.');
+  if (!['procurement','qa'].includes(role)) return showMsg('signup-msg', 'Pick Procurement or QA.');
+  if (pass.length < 8) return showMsg('signup-msg', 'Use a password of at least 8 characters.');
+  if (pass !== pass2) return showMsg('signup-msg', 'Those passwords do not match.');
+  showMsg('signup-msg', '');
+
+  busy($('btn-signup'), true);
+  const { data, error } = await S.sb.auth.signUp({
+    email, password: pass,
+    options: { data: { full_name, designation, role } },
+  });
+  // Some Supabase auth settings sign the browser straight in on signUp — sign back out
+  // so the pending account can't use the app before an admin approves it.
+  if (data?.session) await S.sb.auth.signOut();
+  busy($('btn-signup'), false, 'Create account');
+
+  if (error) {
+    return showMsg('signup-msg', error.message.includes('already registered') || error.message.includes('already been registered')
+      ? 'An account with that email already exists. Try signing in instead.'
+      : error.message);
+  }
+
+  ['su-name','su-email','su-post','su-pass','su-pass2'].forEach(id => $(id).value = '');
+  showGate('screen-auth');
+  showMsg('auth-msg', `Thanks, ${full_name.split(' ')[0]}. Your account is waiting for admin approval — you'll be able to sign in once it's authorized.`, 'ok');
+}
+
 $('btn-logout').onclick = async () => {
   await S.sb.auth.signOut();
   location.reload();
@@ -1031,12 +1202,22 @@ async function enterApp() {
 
   if (error || !prof) {
     await S.sb.auth.signOut();
-    $('screen-auth').style.display = 'flex';
+    showGate('screen-auth');
     return showMsg('auth-msg', 'No portal profile is linked to this account. Ask an admin to add you.');
+  }
+  if (prof.status === 'pending') {
+    await S.sb.auth.signOut();
+    showGate('screen-auth');
+    return showMsg('auth-msg', 'Your account is still waiting for admin approval.');
+  }
+  if (prof.status === 'rejected') {
+    await S.sb.auth.signOut();
+    showGate('screen-auth');
+    return showMsg('auth-msg', 'This account request was declined. Contact an admin.');
   }
   if (prof.is_active === false) {
     await S.sb.auth.signOut();
-    $('screen-auth').style.display = 'flex';
+    showGate('screen-auth');
     return showMsg('auth-msg', 'This account has been switched off. Contact an admin.');
   }
 
@@ -1068,7 +1249,7 @@ const NAV = [
   { id:'intake',    label:'New sample', short:'New',     roles:['procurement','admin'] },
   { id:'queue',     label:'Test queue', short:'Queue',   roles:['qa','admin'], badge:true },
   { id:'records',   label:'Records',    short:'Records', roles:['procurement','qa','admin'] },
-  { id:'users',     label:'Users',      short:'Users',   roles:['admin'] },
+  { id:'users',     label:'Users',      short:'Users',   roles:['admin'], badge:true },
 ];
 
 function buildNav() {
@@ -1078,11 +1259,18 @@ function buildNav() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round">${ICONS[n.id]}</svg>
       <span>${mobile ? n.short : n.label}</span>
-      ${n.badge ? `<span class="badge" id="badge-${mobile?'m':'d'}" style="display:none">0</span>` : ''}
+      ${n.badge ? `<span class="badge" id="badge-${n.id}-${mobile?'m':'d'}" style="display:none">0</span>` : ''}
     </button>`;
   $('nav-desktop').innerHTML = items.map(n => mk(n, false)).join('');
   $('nav-mobile').innerHTML  = items.map(n => mk(n, true)).join('');
   document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+}
+
+function setBadge(navId, count) {
+  ['d','m'].forEach(suffix => {
+    const b = $(`badge-${navId}-${suffix}`);
+    if (b) { b.textContent = count; b.style.display = count ? '' : 'none'; }
+  });
 }
 
 function go(view) {
@@ -1105,10 +1293,7 @@ async function loadSamples() {
   if (error) { toast('Could not load samples: ' + error.message, 'err'); return; }
   S.samples = data || [];
   const waiting = S.samples.filter(s => s.status === 'Awaiting QA').length;
-  ['badge-d','badge-m'].forEach(id => {
-    const b = $(id);
-    if (b) { b.textContent = waiting; b.style.display = waiting ? '' : 'none'; }
-  });
+  setBadge('queue', waiting);
 }
 
 /* --------------------------- dashboard ------------------------------ */
@@ -1708,11 +1893,65 @@ async function loadUsers() {
   const { data, error } = await S.sb.from('profiles').select('*').order('created_at');
   if (error) return;
   S.users = data || [];
+  setBadge('users', S.users.filter(u => u.status === 'pending').length);
   if (S.view === 'users') renderUsers();
 }
 
+function renderPending() {
+  const pending = S.users.filter(u => u.status === 'pending');
+  $('pending-card').style.display = pending.length ? '' : 'none';
+  $('pending-rows').innerHTML = pending.map(u => `
+    <div class="rec" style="grid-template-columns:1fr auto">
+      <div>
+        <div class="rec-title" style="margin-bottom:2px">${esc(u.full_name || u.email)}</div>
+        <div class="rec-meta">
+          <span><b>Email</b>${esc(u.email || '')}</span>
+          ${u.designation ? `<span><b>Role</b>${esc(u.designation)}</span>` : ''}
+          <span><b>Requested</b>${humanDate(u.created_at)}</span>
+        </div>
+      </div>
+      <div class="rec-right" style="flex-direction:row;align-items:center">
+        <select data-pending-role="${u.id}" style="padding:6px 9px;background:var(--sink);border:1px solid var(--line);border-radius:5px;font-size:12.5px">
+          <option value="procurement"${u.role === 'procurement' ? ' selected' : ''}>Procurement</option>
+          <option value="qa"${u.role === 'qa' ? ' selected' : ''}>QA</option>
+          <option value="admin"${u.role === 'admin' ? ' selected' : ''}>Admin</option>
+        </select>
+        <button class="btn sm" data-approve="${u.id}">Approve</button>
+        <button class="btn danger sm" data-decline="${u.id}">Decline</button>
+      </div>
+    </div>`).join('') || '<div style="color:var(--mut);font-size:13px;padding:4px 0">Nothing waiting on you right now.</div>';
+
+  $('pending-rows').querySelectorAll('[data-approve]').forEach(b => {
+    b.onclick = async () => {
+      const role = $('pending-rows').querySelector(`[data-pending-role="${b.dataset.approve}"]`).value;
+      busy(b, true);
+      const { error } = await S.sb.from('profiles')
+        .update({ role, status: 'approved', is_active: true, approved_by: S.me.id, approved_at: new Date().toISOString() })
+        .eq('id', b.dataset.approve);
+      if (error) { busy(b, false, 'Approve'); return toast(error.message, 'err'); }
+      toast('Account approved.');
+      loadUsers();
+    };
+  });
+  $('pending-rows').querySelectorAll('[data-decline]').forEach(b => {
+    b.onclick = () => {
+      const u = S.users.find(x => x.id === b.dataset.decline);
+      confirmAction('Decline this account?',
+        `${u.full_name || u.email} will not be able to sign in. You can still remove them completely from "Everyone with access".`,
+        'Decline', async () => {
+          const { error } = await S.sb.from('profiles')
+            .update({ status: 'rejected', is_active: false }).eq('id', u.id);
+          if (error) return toast(error.message, 'err');
+          toast('Account declined.');
+          loadUsers();
+        });
+    };
+  });
+}
+
 function renderUsers() {
-  $('user-rows').innerHTML = S.users.map(u => `
+  renderPending();
+  $('user-rows').innerHTML = S.users.filter(u => u.status !== 'pending').map(u => `
     <tr>
       <td data-l="Name">
         <div>
@@ -1730,7 +1969,7 @@ function renderUsers() {
       </td>
       <td data-l="Access">
         <button class="pill ${u.is_active ? 'p-pass' : 'p-fail'}" data-toggle="${u.id}">
-          ${u.is_active ? 'Active' : 'Switched off'}
+          ${u.is_active ? 'Active' : (u.status === 'rejected' ? 'Declined' : 'Switched off')}
         </button>
       </td>
       <td data-l="">
@@ -1753,10 +1992,12 @@ function renderUsers() {
   $('user-rows').querySelectorAll('[data-toggle]').forEach(b => {
     b.onclick = async () => {
       const u = S.users.find(x => x.id === b.dataset.toggle);
+      const willActivate = !u.is_active;
       const { error } = await S.sb.from('profiles')
-        .update({ is_active: !u.is_active }).eq('id', u.id);
+        .update({ is_active: willActivate, status: willActivate ? 'approved' : u.status })
+        .eq('id', u.id);
       if (error) return toast(error.message, 'err');
-      toast(u.is_active ? 'Access switched off.' : 'Access restored.');
+      toast(willActivate ? 'Access restored.' : 'Access switched off.');
       loadUsers();
     };
   });
