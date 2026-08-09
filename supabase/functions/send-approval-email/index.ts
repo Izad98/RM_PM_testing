@@ -14,20 +14,24 @@
 //
 // Deploy:
 //   supabase functions deploy send-approval-email
-//   supabase secrets set RESEND_API_KEY=re_xxx
-//   supabase secrets set RESEND_FROM="HEMAS QA <qa@yourverifieddomain.com>"
+//   supabase secrets set BREVO_API_KEY=xkeysib-xxx
+//   supabase secrets set BREVO_FROM_EMAIL=you@example.com
+//   supabase secrets set BREVO_FROM_NAME="HEMAS QA"
 // (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided automatically by
 // the Edge Functions runtime — do not set them yourself.)
 //
-// Requires a Resend account with a verified sending domain (or use their
-// onboarding@resend.dev sender for testing before your domain is
-// verified). https://resend.com/domains
+// Uses Brevo (https://brevo.com) instead of a provider that requires a
+// verified sending *domain*: Brevo's free plan (300 emails/day, no card)
+// only needs a single verified sender *email address* — click the
+// confirmation link Brevo emails you at Settings → Senders, no DNS or
+// domain purchase required — and you can then send to any recipient.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const RESEND_FROM = Deno.env.get("RESEND_FROM") || "HEMAS QA <onboarding@resend.dev>";
+const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
+const BREVO_FROM_EMAIL = Deno.env.get("BREVO_FROM_EMAIL") || "";
+const BREVO_FROM_NAME = Deno.env.get("BREVO_FROM_NAME") || "HEMAS QA";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -44,20 +48,29 @@ function safeAppUrl(raw: unknown): string | null {
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
-  if (!RESEND_API_KEY) {
-    return { ok: false, error: "RESEND_API_KEY is not configured on this project." };
+  if (!BREVO_API_KEY) {
+    return { ok: false, error: "BREVO_API_KEY is not configured on this project." };
   }
-  const res = await fetch("https://api.resend.com/emails", {
+  if (!BREVO_FROM_EMAIL) {
+    return { ok: false, error: "BREVO_FROM_EMAIL is not configured on this project." };
+  }
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "api-key": BREVO_API_KEY,
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
-    body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
+    body: JSON.stringify({
+      sender: { email: BREVO_FROM_EMAIL, name: BREVO_FROM_NAME },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    return { ok: false, error: `Resend responded ${res.status}: ${text}` };
+    return { ok: false, error: `Brevo responded ${res.status}: ${text}` };
   }
   return { ok: true };
 }
