@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Report verification — HEMAS QA</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --ink:#101319; --panel:#171b23; --raise:#1f242f; --sink:#0b0d12;
+  --line:#2a3140; --line-soft:#212734;
+  --teal:#12b394; --teal-dim:#0d7d68; --teal-glow:rgba(18,179,148,.14);
+  --red:#ef5b54; --red-glow:rgba(239,91,84,.13);
+  --txt:#e9edf2; --mut:#8792a3; --faint:#5c6577;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --ink:#f3f5f8; --panel:#ffffff; --raise:#eef1f5; --sink:#f7f8fa;
+    --line:#dbe1ea; --line-soft:#e6eaf0;
+    --teal:#0d8f75; --teal-dim:#0a6d59; --teal-glow:rgba(13,143,117,.10);
+    --red:#c8382f; --red-glow:rgba(200,56,47,.10);
+    --txt:#161a22; --mut:#5b6577; --faint:#8792a3;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink);color:var(--txt);font-family:var(--sans);font-size:14px;line-height:1.5;
+  min-height:100dvh;padding:28px 16px 60px;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:640px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.brand img{height:30px;width:auto}
+.brand b{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--faint)}
+.card{background:var(--panel);border:1px solid var(--line-soft);border-radius:14px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.12)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+h1{margin:6px 0 2px;font-size:19px;font-weight:600;letter-spacing:-.01em}
+.code{font-family:var(--mono);font-size:12px;color:var(--teal);margin-bottom:18px}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:100px;
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+}
+.pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
+.p-pass{background:var(--teal-glow);color:var(--teal)}
+.p-fail{background:var(--red-glow);color:var(--red)}
+.p-pending{background:var(--raise);color:var(--mut)}
+.row{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.row:last-child{border-bottom:none}
+.row .l{color:var(--mut)}
+.row .r{text-align:right;max-width:62%}
+.sect{margin:22px 0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+th,td{border:1px solid var(--line-soft);padding:7px 9px;text-align:left;vertical-align:top}
+th{background:var(--raise);font-weight:600;color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+.fail-cell{color:var(--red);font-weight:600}
+.pass-cell{color:var(--teal);font-weight:600}
+.sigs{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px}
+.sig{flex:1;min-width:200px}
+.sig img{max-width:100%;max-height:60px;background:#fff;border-radius:6px;padding:6px;border:1px solid var(--line)}
+.sig .name{margin-top:6px;font-size:12.5px;font-weight:600}
+.sig .post{font-size:11px;color:var(--mut)}
+.note{margin-top:22px;font-size:11.5px;color:var(--faint);line-height:1.6}
+.state{text-align:center;padding:60px 20px;color:var(--mut)}
+.state svg{width:36px;height:36px;color:var(--line);margin-bottom:14px}
+.state b{display:block;color:var(--txt);font-size:16px;margin-bottom:6px}
+.photo{margin-top:8px}
+.photo img{max-width:100%;border-radius:8px;border:1px solid var(--line-soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.display='none'">
+    <b>HEMAS QA · REPORT VERIFICATION</b>
+  </div>
+  <div class="card" id="card">
+    <div class="state" id="loading">
+      <b>Checking report…</b>
+      <p>Looking this code up in the QA system.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const BUILTIN_URL = "https://zfpnstacxwieooayrnoo.supabase.co";
+const BUILTIN_KEY = "sb_publishable_EQjzahCsZx7Am0jggH-gYw_H6YHE3xd";
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function humanDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (isNaN(dt)) return '—';
+  return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+function resultPill(status) {
+  if (status === 'PASS') return '<span class="pill p-pass">Pass</span>';
+  if (status === 'FAIL') return '<span class="pill p-fail">Fail</span>';
+  return '<span class="pill p-pending">Pending</span>';
+}
+
+function renderState(icon, title, body) {
+  document.getElementById('card').innerHTML = `
+    <div class="state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">${icon}</svg>
+      <b>${title}</b><p>${body}</p>
+    </div>`;
+}
+
+function renderReport(x) {
+  const rows = x.test_results || [];
+  document.getElementById('card').innerHTML = `
+    <div class="eyebrow">${x.material_type === 'Packing Material' ? 'Packing material' : 'Raw material'} · ${esc(x.doc_ref || '')}</div>
+    <h1>${esc(x.material_description || 'Material')}</h1>
+    <div class="code">${esc(x.sample_code || '')} · ${esc(x.supplier_name || '')}</div>
+    ${resultPill(x.final_status)}
+
+    <div class="sect">Material details</div>
+    <div class="row"><span class="l">Sample size</span><span class="r">${esc(x.sample_size || '—')}</span></div>
+    <div class="row"><span class="l">Batch / lot no.</span><span class="r">${esc(x.batch_no || '—')}</span></div>
+    <div class="row"><span class="l">R&amp;D reference</span><span class="r">${esc(x.rnd_ref || '—')}</span></div>
+    <div class="row"><span class="l">Used for</span><span class="r">${esc(x.used_for || '—')}</span></div>
+    <div class="row"><span class="l">Date received</span><span class="r">${humanDate(x.date_received)}</span></div>
+    <div class="row"><span class="l">Date tested</span><span class="r">${humanDate(x.date_tested)}</span></div>
+
+    ${rows.length ? `
+      <div class="sect">Test results</div>
+      <table>
+        <thead><tr><th>Test</th><th>Specification</th><th>Reading</th><th>Result</th></tr></thead>
+        <tbody>
+          ${rows.map(t => `<tr>
+            <td>${esc(t.test || '')}</td><td>${esc(t.spec || '')}</td><td>${esc(t.result || '')}</td>
+            <td class="${t.status === 'Fail' ? 'fail-cell' : t.status === 'Pass' ? 'pass-cell' : ''}">${esc(t.status || '')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+
+    ${x.comments ? `<div class="sect">Comments</div><div class="row" style="display:block">${esc(x.comments)}</div>` : ''}
+
+    ${x.photo_path ? `<div class="sect">Sample inspection image</div><div class="photo"><img src="${esc(x.photo_path)}" alt="Sample photo"></div>` : ''}
+
+    <div class="sect">Signed off</div>
+    <div class="sigs">
+      <div class="sig">
+        ${x.analyst_signature ? `<img src="${x.analyst_signature}" alt="Analyst signature">` : ''}
+        <div class="name">${esc(x.analyzed_by || '—')}</div>
+        <div class="post">Analysed by${x.analyzed_by_post ? ' · ' + esc(x.analyzed_by_post) : ''}</div>
+      </div>
+      <div class="sig">
+        ${x.approver_signature ? `<img src="${x.approver_signature}" alt="Approver signature">` : ''}
+        <div class="name">${esc(x.approved_by || '—')}</div>
+        <div class="post">Reviewed &amp; approved by${x.approved_by_post ? ' · ' + esc(x.approved_by_post) : ''}</div>
+      </div>
+    </div>
+
+    <div class="note">
+      Released ${humanDate(x.released_at)} · Generated from the HEMAS QA system.
+      This page shows exactly what was signed off — the same information printed on the physical report.
+    </div>
+  `;
+}
+
+async function run() {
+  const code = new URLSearchParams(location.search).get('c');
+  if (!code) {
+    return renderState(
+      '<path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 003.82 21h16.36a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+      'No report code given',
+      'Scan the QR code printed on a HEMAS QA report to verify it here.');
+  }
+  if (typeof supabase === 'undefined') {
+    return renderState(
+      '<path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 003.82 21h16.36a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+      'Could not reach the QA system',
+      'Check your internet connection and reload this page.');
+  }
+  const sb = supabase.createClient(BUILTIN_URL, BUILTIN_KEY);
+  const { data, error } = await sb.rpc('get_report_by_code', { p_code: code });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row) {
+    return renderState(
+      '<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>',
+      'Report not found',
+      "This code doesn't match a released report. It may have been mistyped, or the report hasn't been released yet.");
+  }
+  renderReport(row);
+}
+run();
+</script>
+</body>
+</html>
