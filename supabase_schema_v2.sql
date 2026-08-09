@@ -32,12 +32,7 @@
 --     find the constraint under "Constraints" and drop it, or run:
 --       alter table public.samples drop constraint <its name>;
 --     then re-run this file.
---   - pgcrypto must be enabled for gen_random_bytes()/gen_random_uuid()
---     — Supabase projects have it on by default; the CREATE EXTENSION
---     below is a no-op if so.
 -- =====================================================================
-
-create extension if not exists pgcrypto;
 
 -- ---------------------------------------------------------------------
 -- 1. profiles: who is allowed to be sent reports for approval
@@ -301,7 +296,11 @@ begin
       approver_signature = p_signature,
       approved_by = coalesce(nullif(trim(p_approved_by), ''), v_me.full_name),
       approved_by_post = coalesce(nullif(trim(p_approved_by_post), ''), v_me.designation),
-      verify_code = coalesce(v_sample.verify_code, encode(gen_random_bytes(6), 'hex')),
+      -- gen_random_uuid() is native to Postgres core (unlike gen_random_bytes(),
+      -- which needs the pgcrypto extension — often installed outside the
+      -- `public` schema on Supabase, where this SECURITY DEFINER function's
+      -- search_path can't see it). Trimmed to 12 hex chars: same ~48 bits.
+      verify_code = coalesce(v_sample.verify_code, substr(replace(gen_random_uuid()::text, '-', ''), 1, 12)),
       rejected_reason = null
     where id = p_sample_id
     returning * into v_sample;
