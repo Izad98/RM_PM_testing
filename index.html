@@ -20,6 +20,8 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
 <style>
 :root{
   --ink:#101319; --panel:#171b23; --raise:#1f242f; --sink:#0b0d12;
@@ -475,6 +477,60 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
   display:flex;justify-content:space-between;font-family:'Courier New',monospace;
 }
 .doc .fail-r td{color:#c62828}
+.doc .d-sign .sig-img{max-height:44px;max-width:92%;margin:0 auto 2px;display:block;object-fit:contain}
+.doc .d-qr{display:flex;align-items:center;gap:10px;margin-top:12px}
+.doc .d-qr small{font-size:8px;color:#777;font-family:'Courier New',monospace;line-height:1.5}
+
+/* ---------- notifications bell ---------- */
+.bell{position:relative}
+.bell .dot{
+  position:absolute;top:1px;right:1px;width:9px;height:9px;border-radius:50%;
+  background:var(--red);border:2px solid var(--panel);display:none;
+}
+.bell.has .dot{display:block}
+.notif-pop{
+  position:absolute;top:52px;right:0;width:340px;max-width:calc(100vw - 24px);
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,.35);z-index:70;display:none;max-height:70vh;overflow:auto;
+}
+.notif-pop.on{display:block}
+.notif-pop h4{margin:0;padding:14px 16px;border-bottom:1px solid var(--line-soft);font-size:13px}
+.notif-row{display:block;width:100%;text-align:left;padding:12px 16px;border-bottom:1px solid var(--line-soft);transition:background .12s}
+.notif-row:last-child{border-bottom:none}
+.notif-row:hover{background:var(--raise)}
+.notif-row.unread{background:var(--teal-glow)}
+.notif-row b{display:block;font-size:12.5px;margin-bottom:3px;font-weight:600}
+.notif-row p{margin:0;font-size:11.5px;color:var(--mut);line-height:1.4}
+.notif-row span{display:block;margin-top:5px;font-family:var(--mono);font-size:9.5px;color:var(--faint)}
+
+/* ---------- approval banners + signature pad ---------- */
+.banner{border-radius:8px;padding:11px 13px;font-size:12.5px;margin-bottom:14px;line-height:1.5}
+.banner.warn{background:var(--amber-glow);color:var(--amber);border:1px solid rgba(233,161,59,.3)}
+.banner.info{background:var(--teal-glow);color:var(--teal);border:1px solid rgba(18,179,148,.3)}
+.sigpad-wrap{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.sigpad-wrap canvas{display:block;width:100%;height:140px;touch-action:none;cursor:crosshair}
+.sigpad-foot{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--raise);border-top:1px solid var(--line)}
+.sigpad-foot span{font-size:11px;color:var(--mut)}
+.sig-thumb{border:1px solid var(--line);border-radius:6px;background:#fff;padding:5px;display:inline-block}
+.sig-thumb img{display:block;max-width:180px;max-height:64px}
+
+/* ---------- modal (send for approval / scan result) ---------- */
+.modal{display:none;position:fixed;inset:0;z-index:85;background:rgba(5,7,10,.7);align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;max-width:460px;width:100%;max-height:88vh;overflow:auto}
+.modal-box h4{margin:0 0 4px;font-size:16px;font-weight:600}
+.modal-box p.sub{margin:0 0 16px;color:var(--mut);font-size:12.5px}
+.modal-act{display:flex;gap:9px;justify-content:flex-end;margin-top:16px}
+
+/* ---------- QR scanner ---------- */
+.scan-view{display:none;position:fixed;inset:0;z-index:95;background:#000;flex-direction:column}
+.scan-view.on{display:flex}
+.scan-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:rgba(0,0,0,.6);flex-shrink:0}
+.scan-top b{color:#fff;font-size:14px}
+.scan-video-wrap{position:relative;flex:1;overflow:hidden;background:#000}
+.scan-video-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-frame{position:absolute;inset:15% 18%;border:3px solid var(--teal);border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45);pointer-events:none}
+.scan-hint{position:absolute;bottom:24px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px;opacity:.9;padding:0 20px}
 
 /* toast */
 #toast{
@@ -621,6 +677,19 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
       <small>Raw &amp; packing material testing portal</small>
     </div>
     <div class="who">
+      <button class="theme-toggle" id="btn-scan" title="Scan report QR" aria-label="Scan report QR">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M3 12h18"/></svg>
+      </button>
+      <div class="bell" id="bell-wrap">
+        <button class="theme-toggle" id="btn-bell" title="Notifications" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="dot"></span>
+        </button>
+        <div class="notif-pop" id="notif-pop">
+          <h4>Notifications</h4>
+          <div id="notif-rows"></div>
+        </div>
+      </div>
       <button class="theme-toggle" id="theme-toggle-app" title="Switch theme" aria-label="Switch theme">
         <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -762,6 +831,16 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
           <p>Samples handed over by procurement and waiting on results.</p>
         </div>
         <div class="reclist" id="queue-list"></div>
+      </section>
+
+      <!-- ===== APPROVALS (managers) ===== -->
+      <section class="view" id="v-approvals">
+        <div class="page-head">
+          <div class="eyebrow">Quality assurance</div>
+          <h2>Approvals</h2>
+          <p>Reports your team has sent you to review, sign and release.</p>
+        </div>
+        <div class="reclist" id="approvals-list"></div>
       </section>
 
       <!-- ===== RECORDS ===== -->
@@ -915,18 +994,19 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
 
       <div class="card" style="margin-bottom:14px">
         <h3>Signatures</h3>
-        <div class="grid2">
-          <div class="field"><label>Analysed by</label><input id="dr-an"></div>
-          <div class="field"><label>Designation</label><input id="dr-anp" placeholder="QA Executive"></div>
-        </div>
-        <div class="grid2">
-          <div class="field" style="margin-bottom:0"><label>Reviewed and approved by</label><input id="dr-ap"></div>
-          <div class="field" style="margin-bottom:0"><label>Designation</label><input id="dr-app" placeholder="QA Manager"></div>
+        <div class="grid2" style="margin-bottom:0">
+          <div class="field" style="margin-bottom:0"><label>Analysed by</label><input id="dr-an"></div>
+          <div class="field" style="margin-bottom:0"><label>Designation</label><input id="dr-anp" placeholder="QA Executive"></div>
         </div>
       </div>
 
+      <div class="card" style="margin-bottom:14px;display:none" id="dr-approval-card">
+        <h3>Approval</h3>
+        <div id="dr-approval-body"></div>
+      </div>
+
       <div style="display:flex;gap:9px;flex-wrap:wrap;padding-bottom:20px">
-        <button class="btn" id="btn-release">Save and release report</button>
+        <button class="btn" id="btn-send-approval">Send for approval</button>
         <button class="btn danger" id="btn-delete-sample">Delete sample</button>
       </div>
     </div>
@@ -980,9 +1060,15 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <div class="d-img" id="p-photo">No inspection photo attached</div>
 
         <div class="d-sign">
-          <div class="sb"><div class="sl"></div><strong>Analysed By</strong><br>
+          <div class="sb">
+            <img class="sig-img" id="p-an-sig" src="" alt="" style="display:none">
+            <div class="sl" id="p-an-line"></div>
+            <strong>Analysed By</strong><br>
             (<span id="p-an">Name</span>)<br><small>(<span id="p-anp">designation</span>)</small></div>
-          <div class="sb"><div class="sl"></div><strong>Reviewed &amp; Approved By</strong><br>
+          <div class="sb">
+            <img class="sig-img" id="p-ap-sig" src="" alt="" style="display:none">
+            <div class="sl" id="p-ap-line"></div>
+            <strong>Reviewed &amp; Approved By</strong><br>
             (<span id="p-ap">Name</span>)<br><small>(<span id="p-app">designation</span>)</small></div>
         </div>
 
@@ -990,10 +1076,64 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
           <span id="p-foot-code">—</span>
           <span>Generated from HEMAS QA System</span>
         </div>
+        <div class="d-qr" id="p-qr-wrap" style="display:none">
+          <div id="p-qr"></div>
+          <small>Scan to verify this report online<br><span id="p-verify-url"></span></small>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ============ 5. SEND FOR APPROVAL ============ -->
+<div class="modal" id="modal-approval">
+  <div class="modal-box">
+    <h4>Send for approval</h4>
+    <p class="sub">Your manager gets a notification (and an email, if configured) to review, sign and release this report.</p>
+    <div class="field">
+      <label class="req">Approver's work email</label>
+      <input id="sa-email" type="email" list="sa-approver-list" placeholder="name@hemas.com" autocomplete="off">
+      <datalist id="sa-approver-list"></datalist>
+      <div class="hint">Only accounts an admin has flagged as approvers can be picked.</div>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label class="req">Your signature</label>
+      <div class="sigpad-wrap"><canvas id="sa-sig"></canvas>
+        <div class="sigpad-foot"><span>Sign with your finger, stylus or mouse</span>
+          <button class="btn ghost sm" type="button" id="btn-clear-sa-sig">Clear</button></div>
+      </div>
+    </div>
+    <div class="msg" id="sa-msg"></div>
+    <div class="modal-act">
+      <button class="btn ghost sm" id="btn-sa-cancel">Cancel</button>
+      <button class="btn sm" id="btn-sa-send">Send for approval</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 6. SCANNED REPORT RESULT ============ -->
+<div class="modal" id="modal-scanresult">
+  <div class="modal-box" style="max-width:520px">
+    <h4 id="sr-title">Report</h4>
+    <p class="sub" id="sr-code"></p>
+    <div id="sr-body"></div>
+    <div class="modal-act"><button class="btn sm" id="btn-sr-close">Close</button></div>
+  </div>
+</div>
+
+<!-- ============ 7. QR SCANNER ============ -->
+<div class="scan-view" id="scan-view">
+  <div class="scan-top">
+    <b>Scan report QR</b>
+    <button class="btn ghost sm" id="btn-scan-close">Close</button>
+  </div>
+  <div class="scan-video-wrap">
+    <video id="scan-video" playsinline muted autoplay></video>
+    <div class="scan-frame"></div>
+    <div class="scan-hint" id="scan-hint">Point the camera at the QR code on a report</div>
+  </div>
+</div>
+<canvas id="scan-canvas" style="display:none"></canvas>
 
 <div id="toast"></div>
 
@@ -1045,11 +1185,20 @@ const S = {
   me: null,          // profile row
   samples: [],
   users: [],
+  approvers: [],     // active profiles flagged can_approve
+  notifications: [],
   view: 'dashboard',
   editing: null,     // sample currently open in the drawer
   photoData: null,   // dataURL of a newly picked photo
   photoFile: null,
 };
+
+// Signature pads currently mounted (approver inline pad + send-for-approval
+// modal pad). Torn down before a new one is created so re-opening the
+// drawer/modal repeatedly never leaks window-level pointer/resize listeners.
+let activePads = [];
+function destroyPads() { activePads.forEach(fn => fn()); activePads = []; }
+let analystPad = null, approverPad = null;
 
 const ROLE_LABEL = { procurement:'Procurement', qa:'Quality Assurance', admin:'Administrator' };
 
@@ -1098,10 +1247,108 @@ function confirmAction(title, body, yesLabel, fn) {
 $('sheet-no').onclick = () => $('sheet').classList.remove('on');
 $('sheet').onclick = (e) => { if (e.target.id === 'sheet') $('sheet').classList.remove('on'); };
 
+/* --------------------------- signature pad ---------------------------
+   Ink is always drawn on a plain white background regardless of the
+   app's own theme, so a signature reads correctly once printed. Pointer
+   events cover mouse, touch and stylus with one code path. */
+function createSignaturePad(canvas) {
+  const ctx = canvas.getContext('2d');
+  let drawing = false, hasInk = false, dpr = 1;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  function paintBg() {
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    ctx.restore();
+  }
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintBg();
+  }
+  function pos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+  function track(x, y) {
+    minX = Math.min(minX, x); minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+  }
+  function start(e) {
+    e.preventDefault();
+    drawing = true;
+    const { x, y } = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    track(x, y);
+  }
+  function move(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const { x, y } = pos(e);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1a2233';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    hasInk = true;
+    track(x, y);
+  }
+  function end() { drawing = false; }
+
+  canvas.addEventListener('pointerdown', start);
+  canvas.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+  window.addEventListener('resize', resize);
+  resize();
+
+  function destroy() {
+    canvas.removeEventListener('pointerdown', start);
+    canvas.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', end);
+    window.removeEventListener('pointercancel', end);
+    window.removeEventListener('resize', resize);
+  }
+  activePads.push(destroy);
+
+  return {
+    clear() {
+      hasInk = false;
+      minX = Infinity; minY = Infinity; maxX = -Infinity; maxY = -Infinity;
+      paintBg();
+    },
+    isEmpty() { return !hasInk; },
+    toDataURL() {
+      if (!hasInk) return null;
+      const pad = 8;
+      const x = Math.max(0, minX - pad), y = Math.max(0, minY - pad);
+      const w = Math.min(canvas.clientWidth, maxX + pad) - x;
+      const h = Math.min(canvas.clientHeight, maxY + pad) - y;
+      const out = document.createElement('canvas');
+      out.width = Math.max(1, Math.round(w * dpr));
+      out.height = Math.max(1, Math.round(h * dpr));
+      const octx = out.getContext('2d');
+      octx.fillStyle = '#fff';
+      octx.fillRect(0, 0, out.width, out.height);
+      octx.drawImage(canvas, x * dpr, y * dpr, w * dpr, h * dpr, 0, 0, out.width, out.height);
+      return out.toDataURL('image/png', 0.92);
+    },
+    destroy,
+  };
+}
+
 const can = {
   create: () => ['procurement','admin'].includes(S.me?.role),
   test:   () => ['qa','admin'].includes(S.me?.role),
   admin:  () => S.me?.role === 'admin',
+  decide: (x) => x?.status === 'Pending Approval'
+    && (x.requested_approver_id === S.me?.id || S.me?.role === 'admin'),
 };
 
 /* ------------------------- boot / connection ------------------------ */
@@ -1249,9 +1496,14 @@ async function enterApp() {
   $('screen-auth').style.display = 'none';
   $('app').classList.add('on');
 
+  if (can.test()) loadApprovers();
   await loadSamples();
   go(can.test() && !can.admin() ? 'queue' : 'dashboard');
   if (can.admin()) loadUsers();
+
+  loadNotifications();
+  subscribeNotifications();
+  setInterval(() => { if (S.me) loadNotifications(); }, 60000);
 }
 
 /* ------------------------------ navigation -------------------------- */
@@ -1259,19 +1511,21 @@ const ICONS = {
   dashboard:'<path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>',
   intake:'<path d="M12 5v14M5 12h14"/>',
   queue:'<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
+  approvals:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
   records:'<path d="M4 6h16M4 12h16M4 18h10"/>',
   users:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
 };
 const NAV = [
-  { id:'dashboard', label:'Dashboard',  short:'Home',    roles:['procurement','qa','admin'] },
-  { id:'intake',    label:'New sample', short:'New',     roles:['procurement','admin'] },
-  { id:'queue',     label:'Test queue', short:'Queue',   roles:['qa','admin'], badge:true },
-  { id:'records',   label:'Records',    short:'Records', roles:['procurement','qa','admin'] },
-  { id:'users',     label:'Users',      short:'Users',   roles:['admin'], badge:true },
+  { id:'dashboard',  label:'Dashboard',  short:'Home',    roles:['procurement','qa','admin'] },
+  { id:'intake',     label:'New sample', short:'New',     roles:['procurement','admin'] },
+  { id:'queue',      label:'Test queue', short:'Queue',   roles:['qa','admin'], badge:true },
+  { id:'approvals',  label:'Approvals',  short:'Approve', roles:['qa','admin'], badge:true, show: () => S.me?.can_approve === true },
+  { id:'records',    label:'Records',    short:'Records', roles:['procurement','qa','admin'] },
+  { id:'users',      label:'Users',      short:'Users',   roles:['admin'], badge:true },
 ];
 
 function buildNav() {
-  const items = NAV.filter(n => n.roles.includes(S.me.role));
+  const items = NAV.filter(n => n.roles.includes(S.me.role) && (!n.show || n.show()));
   const mk = (n, mobile) => `
     <button class="navbtn" data-go="${n.id}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -1291,27 +1545,108 @@ function setBadge(navId, count) {
   });
 }
 
+/* --------------------------- notifications --------------------------- */
+async function loadNotifications() {
+  const { data, error } = await S.sb.from('notifications')
+    .select('*').order('created_at', { ascending: false }).limit(30);
+  if (error) return;
+  S.notifications = data || [];
+  renderNotifications();
+}
+
+function subscribeNotifications() {
+  S.sb.channel('notif-' + S.me.id)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${S.me.id}` },
+      (payload) => {
+        S.notifications.unshift(payload.new);
+        renderNotifications();
+        toast(payload.new.title);
+        loadSamples().then(() => go(S.view));
+      })
+    .subscribe();
+}
+
+function renderNotifications() {
+  const unread = S.notifications.filter(n => !n.is_read).length;
+  $('bell-wrap').classList.toggle('has', unread > 0);
+  $('notif-rows').innerHTML = S.notifications.length
+    ? S.notifications.map(n => `
+      <button class="notif-row ${n.is_read ? '' : 'unread'}" data-notif="${n.id}" data-sample="${n.sample_id || ''}">
+        <b>${esc(n.title)}</b>
+        ${n.body ? `<p>${esc(n.body)}</p>` : ''}
+        <span>${humanDate(n.created_at)}</span>
+      </button>`).join('')
+    : '<div style="padding:22px 16px;text-align:center;color:var(--mut);font-size:12.5px">Nothing yet.</div>';
+
+  $('notif-rows').querySelectorAll('[data-notif]').forEach(b => {
+    b.onclick = async () => {
+      const n = S.notifications.find(x => x.id === b.dataset.notif);
+      if (n && !n.is_read) {
+        n.is_read = true;
+        renderNotifications();
+        S.sb.from('notifications').update({ is_read: true }).eq('id', n.id).then(() => {});
+      }
+      $('notif-pop').classList.remove('on');
+      if (b.dataset.sample) {
+        await loadSamples();
+        const x = S.samples.find(s => s.id === b.dataset.sample);
+        if (x) {
+          const view = x.status === 'Pending Approval' && x.requested_approver_id === S.me.id ? 'approvals'
+            : (S.me.role === 'procurement' ? 'records' : 'queue');
+          go(view);
+          openReport(x.id);
+        }
+      }
+    };
+  });
+}
+
+$('btn-bell').onclick = (e) => { e.stopPropagation(); $('notif-pop').classList.toggle('on'); };
+document.addEventListener('click', (e) => {
+  if (!$('bell-wrap').contains(e.target)) $('notif-pop').classList.remove('on');
+});
+
 function go(view) {
   S.view = view;
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
   document.querySelectorAll('[data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === view));
   window.scrollTo(0, 0);
-  if (view === 'dashboard') renderDashboard();
-  if (view === 'queue')     renderQueue();
-  if (view === 'records')   renderRecords();
-  if (view === 'users')     renderUsers();
+  if (view === 'dashboard')  renderDashboard();
+  if (view === 'queue')      renderQueue();
+  if (view === 'approvals')  renderApprovals();
+  if (view === 'records')    renderRecords();
+  if (view === 'users')      renderUsers();
+}
+
+function renderApprovals() {
+  const mine = S.samples.filter(x => x.status === 'Pending Approval' && x.requested_approver_id === S.me.id);
+  const box = $('approvals-list');
+  box.innerHTML = mine.length
+    ? mine.map(recCard).join('')
+    : emptyState('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+        'Nothing waiting on you', 'Reports your team sends you for approval will show up here.');
+  wireCards(box);
 }
 
 /* ------------------------------ data -------------------------------- */
 async function loadSamples() {
   const { data, error } = await S.sb
     .from('samples')
-    .select('*, submitter:submitted_by(full_name), tester:qa_user(full_name)')
+    .select('*, submitter:submitted_by(full_name), tester:qa_user(full_name), requested_approver:requested_approver_id(full_name)')
     .order('submitted_at', { ascending: false });
   if (error) { toast('Could not load samples: ' + error.message, 'err'); return; }
   S.samples = data || [];
   const waiting = S.samples.filter(s => s.status === 'Awaiting QA').length;
   setBadge('queue', waiting);
+  const mine = S.samples.filter(s => s.status === 'Pending Approval' && s.requested_approver_id === S.me?.id).length;
+  setBadge('approvals', mine);
+}
+
+async function loadApprovers() {
+  const { data, error } = await S.sb.from('profiles')
+    .select('id, email, full_name').eq('can_approve', true).eq('is_active', true);
+  if (!error) S.approvers = data || [];
 }
 
 /* --------------------------- dashboard ------------------------------ */
@@ -1632,8 +1967,6 @@ function openReport(id) {
   $('dr-comments').value = x.comments || '';
   $('dr-an').value = x.analyzed_by || (can.test() ? S.me.full_name : '');
   $('dr-anp').value = x.analyzed_by_post || (can.test() ? S.me.designation : '');
-  $('dr-ap').value = x.approved_by || '';
-  $('dr-app').value = x.approved_by_post || '';
 
   setFinal(x.final_status || 'PENDING');
 
@@ -1646,11 +1979,12 @@ function openReport(id) {
     ? `<img src="${esc(x.photo_path)}" alt="Sample photo">`
     : '<span>Tap to add a photo of the sample</span>';
 
-  const editable = can.test();
-  $('dpane-form').querySelectorAll('input,select,textarea,#btn-addrow,#btn-release')
+  const locked = x.status === 'Pending Approval' || x.status === 'Released';
+  const editable = can.test() && !locked;
+  $('dpane-form').querySelectorAll('input,select,textarea,#btn-addrow,#btn-send-approval')
     .forEach(n => { n.disabled = !editable; });
   $('btn-save-report').style.display = editable ? '' : 'none';
-  $('btn-release').style.display = editable ? '' : 'none';
+  $('btn-send-approval').style.display = editable ? '' : 'none';
   $('btn-delete-sample').style.display = can.admin() ? '' : 'none';
   $('dr-photo-box').style.pointerEvents = editable ? '' : 'none';
 
@@ -1659,6 +1993,10 @@ function openReport(id) {
   $('drawer').classList.add('on');
   $('drawer').classList.remove('preview');
   $('btn-swap').textContent = 'Preview';
+  // Signature <canvas> sizing reads clientWidth/Height, which is 0 while an
+  // ancestor is display:none — render the approval card only once the
+  // drawer itself is visible, or the pad's backing bitmap ends up 0x0.
+  renderApprovalCard(x);
   $('dpane-form').scrollTop = 0;
 }
 
@@ -1680,7 +2018,97 @@ function drawChain(x) {
     </div>`).join('');
 }
 
-$('btn-close-drawer').onclick = () => { $('drawer').classList.remove('on'); S.editing = null; };
+/* -------------------------- approval card ---------------------------- */
+function renderApprovalCard(x) {
+  destroyPads();
+  approverPad = null;
+  const card = $('dr-approval-card');
+  const body = $('dr-approval-body');
+  card.style.display = 'none';
+  body.innerHTML = '';
+
+  if (x.status === 'Pending Approval') {
+    card.style.display = '';
+    if (can.decide(x)) {
+      body.innerHTML = `
+        <div class="banner info">${esc(x.analyzed_by || 'The analyst')} sent this for your review on ${humanDate(x.requested_at)}.</div>
+        <div class="field">
+          <label>Your signature</label>
+          <div class="sigpad-wrap"><canvas id="dr-approver-sig"></canvas>
+            <div class="sigpad-foot"><span>Sign to approve and release</span>
+              <button class="btn ghost sm" type="button" id="btn-clear-approver-sig">Clear</button></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Your name</label><input id="dr-ap-name" value="${esc(S.me.full_name || '')}"></div>
+          <div class="field"><label>Designation</label><input id="dr-ap-post" value="${esc(S.me.designation || '')}"></div>
+        </div>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn" id="btn-approve">Approve &amp; release</button>
+          <button class="btn danger" id="btn-reject">Send back</button>
+        </div>
+        <div class="field" style="margin:12px 0 0;display:none" id="dr-reject-box">
+          <label>Reason for sending it back</label>
+          <textarea id="dr-reject-reason" rows="2" placeholder="What needs to change"></textarea>
+          <button class="btn danger sm" style="margin-top:8px" id="btn-reject-confirm">Confirm send back</button>
+        </div>`;
+      approverPad = createSignaturePad($('dr-approver-sig'));
+      $('btn-clear-approver-sig').onclick = () => approverPad.clear();
+      $('btn-reject').onclick = () => { $('dr-reject-box').style.display = ''; };
+      $('btn-reject-confirm').onclick = () => submitDecision(x, 'rejected');
+      $('btn-approve').onclick = () => submitDecision(x, 'approved');
+    } else {
+      body.innerHTML = `<div class="banner info">Waiting on ${esc(x.requested_approver?.full_name || 'the approver')} since ${humanDate(x.requested_at)}.</div>`;
+    }
+  } else if (x.status === 'Released') {
+    card.style.display = '';
+    body.innerHTML = `
+      <div class="rankrow" style="padding:0 0 10px">
+        <span class="rname" style="color:var(--mut)">Reviewed &amp; approved by</span>
+        <span style="text-align:right">${esc(x.approved_by || '—')}${x.approved_by_post ? ` · ${esc(x.approved_by_post)}` : ''}</span>
+      </div>
+      ${x.approver_signature ? `<div class="sig-thumb"><img src="${x.approver_signature}" alt="Approver signature"></div>` : ''}
+      <div style="margin-top:9px;font-size:11.5px;color:var(--faint)">Released ${humanDate(x.released_at)}</div>`;
+  } else if (x.rejected_reason) {
+    card.style.display = '';
+    body.innerHTML = `<div class="banner warn">Sent back for changes: ${esc(x.rejected_reason)}</div>`;
+  }
+}
+
+async function submitDecision(x, decision) {
+  const btn = decision === 'approved' ? $('btn-approve') : $('btn-reject-confirm');
+  let signature = null, reason = null;
+  if (decision === 'approved') {
+    if (!approverPad || approverPad.isEmpty()) return toast('Sign the report before approving it.', 'err');
+    signature = approverPad.toDataURL();
+  } else {
+    reason = $('dr-reject-reason').value.trim();
+    if (!reason) return toast('Add a reason so the analyst knows what to fix.', 'err');
+  }
+  busy(btn, true);
+  const { error } = await S.sb.rpc('decide_approval', {
+    p_sample_id: x.id,
+    p_decision: decision,
+    p_signature: signature,
+    p_reason: reason,
+    p_approved_by: $('dr-ap-name')?.value?.trim() || '',
+    p_approved_by_post: $('dr-ap-post')?.value?.trim() || '',
+  });
+  busy(btn, false, decision === 'approved' ? 'Approve & release' : 'Confirm send back');
+  if (error) return toast(error.message, 'err');
+  toast(decision === 'approved' ? `${x.sample_code} approved and released.` : `${x.sample_code} sent back to the analyst.`);
+  notifyEmail(x.id, decision === 'approved' ? 'approved' : 'rejected');
+  await loadSamples();
+  $('drawer').classList.remove('on');
+  go(S.view);
+}
+
+function notifyEmail(sampleId, type) {
+  S.sb.functions.invoke('send-approval-email', { body: { sample_id: sampleId, type, app_url: location.origin } })
+    .catch(() => {});
+}
+
+$('btn-close-drawer').onclick = () => { $('drawer').classList.remove('on'); S.editing = null; destroyPads(); };
 $('btn-swap').onclick = () => {
   const d = $('drawer');
   d.classList.toggle('preview');
@@ -1755,7 +2183,7 @@ $('dr-photo').addEventListener('change', e => {
 });
 
 /* ---- live A4 preview ---- */
-['dr-tested','dr-comments','dr-an','dr-anp','dr-ap','dr-app']
+['dr-tested','dr-comments','dr-an','dr-anp']
   .forEach(id => $(id).addEventListener('input', syncPreview));
 
 function syncPreview() {
@@ -1780,8 +2208,20 @@ function syncPreview() {
   $('p-comments').textContent = $('dr-comments').value;
   $('p-an').textContent   = $('dr-an').value  || 'Name';
   $('p-anp').textContent  = $('dr-anp').value || 'designation';
-  $('p-ap').textContent   = $('dr-ap').value  || 'Name';
-  $('p-app').textContent  = $('dr-app').value || 'designation';
+  $('p-ap').textContent   = x.approved_by      || 'Name';
+  $('p-app').textContent  = x.approved_by_post || 'designation';
+  setSig('p-an-sig', 'p-an-line', x.analyst_signature);
+  setSig('p-ap-sig', 'p-ap-line', x.approver_signature);
+
+  const qrWrap = $('p-qr-wrap');
+  if (x.verify_code) {
+    qrWrap.style.display = '';
+    const url = verifyUrl(x.verify_code);
+    $('p-verify-url').textContent = url.replace(/^https?:\/\//, '');
+    renderQr('p-qr', url);
+  } else {
+    qrWrap.style.display = 'none';
+  }
 
   const box = $('p-final');
   box.className = 'fbox' + (finalStatus === 'PASS' ? ' pass' : finalStatus === 'FAIL' ? ' fail' : '');
@@ -1803,22 +2243,33 @@ function syncPreview() {
     : 'No inspection photo attached';
 }
 
+function setSig(imgId, lineId, dataUrl) {
+  const img = $(imgId), line = $(lineId);
+  if (dataUrl) { img.src = dataUrl; img.style.display = ''; line.style.display = 'none'; }
+  else { img.removeAttribute('src'); img.style.display = 'none'; line.style.display = ''; }
+}
+
+/* verify.html sits next to index.html wherever this app is hosted (the
+   preview URL, production URL — whichever the browser is currently on),
+   so the QR always points at the report's actual host. */
+function verifyUrl(code) {
+  const base = location.href.replace(/[^/]*$/, '');
+  return base + 'verify.html?c=' + encodeURIComponent(code);
+}
+function renderQr(elId, text) {
+  const el = $(elId);
+  el.innerHTML = '';
+  if (typeof QRCode === 'undefined') return;
+  new QRCode(el, { text, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.M });
+}
+
 /* ---- save / release / delete ---- */
-async function persist(release) {
+async function persist() {
   const x = S.editing;
   if (!x) return;
   const rows = collectRows();
 
-  if (release) {
-    const gaps = [];
-    if (!rows.length) gaps.push('at least one test');
-    if (finalStatus === 'PENDING') gaps.push('a final pass or fail');
-    if (!$('dr-an').value.trim()) gaps.push('who analysed it');
-    if (!$('dr-ap').value.trim()) gaps.push('who approved it');
-    if (gaps.length) return toast('Before releasing, add: ' + gaps.join(', '), 'err');
-  }
-
-  const btn = release ? $('btn-release') : $('btn-save-report');
+  const btn = $('btn-save-report');
   busy(btn, true);
 
   let photo_path = x.photo_path;
@@ -1828,7 +2279,7 @@ async function persist(release) {
     const up = await S.sb.storage.from('sample-photos')
       .upload(path, S.photoFile, { upsert: true, contentType: S.photoFile.type });
     if (up.error) {
-      busy(btn, false, release ? 'Save and release report' : 'Save results');
+      busy(btn, false, 'Save results');
       return toast('Photo did not upload: ' + up.error.message, 'err');
     }
     photo_path = S.sb.storage.from('sample-photos').getPublicUrl(path).data.publicUrl;
@@ -1841,27 +2292,79 @@ async function persist(release) {
     comments: $('dr-comments').value.trim(),
     analyzed_by: $('dr-an').value.trim(),
     analyzed_by_post: $('dr-anp').value.trim(),
-    approved_by: $('dr-ap').value.trim(),
-    approved_by_post: $('dr-app').value.trim(),
     qa_user: S.me.id,
     photo_path,
-    status: release ? 'Released' : (x.status === 'Released' ? 'Released' : 'Under Test'),
+    status: x.status === 'Released' ? 'Released' : 'Under Test',
   };
 
   const { error } = await S.sb.from('samples').update(patch).eq('id', x.id);
-  busy(btn, false, release ? 'Save and release report' : 'Save results');
+  busy(btn, false, 'Save results');
   if (error) return toast(error.message, 'err');
 
-  toast(release ? `${x.sample_code} released.` : 'Results saved.');
+  toast('Results saved.');
   S.photoFile = null;
   await loadSamples();
   S.editing = S.samples.find(s => s.id === x.id);
   drawChain(S.editing);
-  if (release) { $('drawer').classList.remove('on'); go(S.view); }
-  else { go(S.view); }
+  go(S.view);
 }
-$('btn-save-report').onclick = () => persist(false);
-$('btn-release').onclick     = () => persist(true);
+$('btn-save-report').onclick = () => persist();
+
+/* ---- send for approval ---- */
+$('btn-send-approval').onclick = () => {
+  const x = S.editing;
+  if (!x) return;
+  const gaps = [];
+  if (!collectRows().length) gaps.push('at least one test');
+  if (finalStatus === 'PENDING') gaps.push('a final pass or fail');
+  if (!$('dr-an').value.trim()) gaps.push('who analysed it');
+  if (gaps.length) return toast('Before sending for approval, add: ' + gaps.join(', '), 'err');
+  openSendApprovalModal();
+};
+
+function openSendApprovalModal() {
+  $('sa-email').value = '';
+  showMsg('sa-msg', '');
+  $('sa-approver-list').innerHTML = S.approvers
+    .filter(a => a.id !== S.me.id)
+    .map(a => `<option value="${esc(a.email)}">${esc(a.full_name)}</option>`).join('');
+  $('modal-approval').classList.add('on');
+  destroyPads();
+  analystPad = createSignaturePad($('sa-sig'));
+}
+$('btn-clear-sa-sig').onclick = () => analystPad?.clear();
+$('btn-sa-cancel').onclick = () => { $('modal-approval').classList.remove('on'); destroyPads(); };
+$('modal-approval').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-approval') { $('modal-approval').classList.remove('on'); destroyPads(); }
+});
+
+$('btn-sa-send').onclick = async () => {
+  const x = S.editing;
+  if (!x) return;
+  const email = $('sa-email').value.trim();
+  if (!email) return showMsg('sa-msg', "Enter your approver's work email.");
+  if (!analystPad || analystPad.isEmpty()) return showMsg('sa-msg', 'Sign the report before sending it.');
+  showMsg('sa-msg', '');
+
+  busy($('btn-sa-send'), true);
+  const { error } = await S.sb.rpc('request_approval', {
+    p_sample_id: x.id,
+    p_approver_email: email,
+    p_analyst_signature: analystPad.toDataURL(),
+    p_analyzed_by: $('dr-an').value.trim(),
+    p_analyzed_by_post: $('dr-anp').value.trim(),
+  });
+  busy($('btn-sa-send'), false, 'Send for approval');
+  if (error) return showMsg('sa-msg', error.message);
+
+  toast(`${x.sample_code} sent for approval.`);
+  notifyEmail(x.id, 'approval_request');
+  $('modal-approval').classList.remove('on');
+  destroyPads();
+  await loadSamples();
+  $('drawer').classList.remove('on');
+  go(S.view);
+};
 
 $('btn-delete-sample').onclick = () => {
   const x = S.editing;
@@ -1990,6 +2493,13 @@ function renderUsers() {
           ${u.is_active ? 'Active' : (u.status === 'rejected' ? 'Declined' : 'Switched off')}
         </button>
       </td>
+      <td data-l="Approver">
+        ${u.role === 'procurement'
+          ? '<span style="font-size:11.5px;color:var(--faint)">—</span>'
+          : `<button class="pill ${u.can_approve ? 'p-pass' : ''}" style="${u.can_approve ? '' : 'background:var(--raise);color:var(--mut)'}" data-approver="${u.id}">
+               ${u.can_approve ? 'Can approve' : 'Cannot approve'}
+             </button>`}
+      </td>
       <td data-l="">
         ${u.id === S.me.id
           ? '<span style="font-size:11.5px;color:var(--faint)">That is you</span>'
@@ -2004,6 +2514,18 @@ function renderUsers() {
       if (error) return toast(error.message, 'err');
       toast('Role updated.');
       loadUsers();
+    };
+  });
+
+  $('user-rows').querySelectorAll('[data-approver]').forEach(b => {
+    b.onclick = async () => {
+      const u = S.users.find(x => x.id === b.dataset.approver);
+      const { error } = await S.sb.from('profiles')
+        .update({ can_approve: !u.can_approve }).eq('id', u.id);
+      if (error) return toast(error.message, 'err');
+      toast(!u.can_approve ? `${u.full_name || u.email} can now approve reports.` : 'Approver access removed.');
+      loadUsers();
+      loadApprovers();
     };
   });
 
@@ -2064,6 +2586,89 @@ $('btn-adduser').onclick = async () => {
   ['u-name','u-email','u-post','u-pass'].forEach(id => $(id).value = '');
   loadUsers();
 };
+
+/* ------------------------------ QR scanner --------------------------- */
+let scanStream = null, scanRAF = null;
+
+$('btn-scan').onclick = openScanner;
+$('btn-scan-close').onclick = closeScanner;
+
+async function openScanner() {
+  if (typeof jsQR === 'undefined') return toast('The QR scanner library did not load.', 'err');
+  $('scan-view').classList.add('on');
+  $('scan-hint').textContent = 'Point the camera at the QR code on a report';
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch {
+    $('scan-hint').textContent = 'Camera access was denied or is unavailable on this device.';
+    return;
+  }
+  const video = $('scan-video');
+  video.srcObject = scanStream;
+  await video.play();
+  scanLoop();
+}
+
+function closeScanner() {
+  $('scan-view').classList.remove('on');
+  if (scanRAF) cancelAnimationFrame(scanRAF);
+  scanRAF = null;
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+}
+
+function scanLoop() {
+  const video = $('scan-video'), canvas = $('scan-canvas');
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(img.data, img.width, img.height);
+    if (code?.data) { handleScan(code.data); return; }
+  }
+  scanRAF = requestAnimationFrame(scanLoop);
+}
+
+async function handleScan(text) {
+  closeScanner();
+  let code = String(text || '').trim();
+  const m = code.match(/[?&]c=([^&]+)/);
+  if (m) code = decodeURIComponent(m[1]);
+  if (!code) return;
+
+  const local = S.samples.find(s => s.verify_code === code);
+  if (local) { openReport(local.id); return; }
+
+  toast('Looking up report…');
+  const { data, error } = await S.sb.rpc('get_report_by_code', { p_code: code });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row) return toast('That QR code did not match a released report.', 'err');
+  openScannedReport(row);
+}
+
+$('btn-sr-close').onclick = () => $('modal-scanresult').classList.remove('on');
+$('modal-scanresult').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-scanresult') $('modal-scanresult').classList.remove('on');
+});
+
+function openScannedReport(row) {
+  $('sr-title').textContent = row.material_description || 'Report';
+  $('sr-code').textContent = `${row.sample_code || ''} · ${row.supplier_name || ''}`;
+  const tests = row.test_results || [];
+  $('sr-body').innerHTML = `
+    <div class="rankrow"><span class="rname" style="color:var(--mut)">Material type</span><span>${esc(row.material_type || '')}</span></div>
+    <div class="rankrow"><span class="rname" style="color:var(--mut)">Batch / lot</span><span>${esc(row.batch_no || '—')}</span></div>
+    <div class="rankrow"><span class="rname" style="color:var(--mut)">Date tested</span><span>${humanDate(row.date_tested)}</span></div>
+    <div class="rankrow"><span class="rname" style="color:var(--mut)">Result</span><span>${statusPill({ status: 'Released', final_status: row.final_status })}</span></div>
+    <div class="rankrow"><span class="rname" style="color:var(--mut)">Analysed by</span><span>${esc(row.analyzed_by || '—')}</span></div>
+    <div class="rankrow"><span class="rname" style="color:var(--mut)">Approved by</span><span>${esc(row.approved_by || '—')}</span></div>
+    <div class="rankrow" style="border-bottom:none"><span class="rname" style="color:var(--mut)">Released</span><span>${humanDate(row.released_at)}</span></div>
+    ${tests.length ? `<div style="margin:12px 0 6px;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.1em">Tests</div>${
+      tests.map(t => `<div class="rankrow"><span class="rname">${esc(t.test)}</span><span>${esc(t.status || t.result || '')}</span></div>`).join('')
+    }` : ''}`;
+  $('modal-scanresult').classList.add('on');
+}
 
 /* ------------------------------- go --------------------------------- */
 boot();
