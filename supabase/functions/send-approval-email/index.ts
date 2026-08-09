@@ -26,11 +26,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND API KEY");
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM = Deno.env.get("RESEND_FROM") || "HEMAS QA <onboarding@resend.dev>";
-const SUPABASE_URL = Deno.env.get(https://zfpnstacxwieooayrnoo.supabase.co)!;
-const SERVICE_ROLE_KEY = Deno.env.get(postgresql://postgres:[YOUR-PASSWORD]@db.zfpnstacxwieooayrnoo.supabase.co:5432/postgres)!;
-const ANON_KEY = Deno.env.get(sb_publishable_EQjzahCsZx7Am0jggH-gYw_H6YHE3xd)!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 function safeAppUrl(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
@@ -50,7 +50,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${"RESEND API KEY"}`,
+      Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization") || "";
-    const callerClient = createClient(https://zfpnstacxwieooayrnoo.supabase.co, sb_publishable_EQjzahCsZx7Am0jggH-gYw_H6YHE3xd, {
+    const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error: authErr } = await callerClient.auth.getUser();
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(https://zfpnstacxwieooayrnoo.supabase.co, postgresql://postgres:[YOUR-PASSWORD]@db.zfpnstacxwieooayrnoo.supabase.co:5432/postgres);
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const { data: sample, error: sErr } = await admin
       .from("samples")
       .select(`
