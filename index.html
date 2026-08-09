@@ -32,6 +32,7 @@
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --serif:'Playfair Display',Georgia,'Times New Roman',serif;
   --r:6px;
+  --topbar-bg:rgba(16,19,25,.92); --tabbar-bg:rgba(16,19,25,.96);
 }
 :root[data-theme="light"]{
   --ink:#f3f5f8; --panel:#ffffff; --raise:#eef1f5; --sink:#f7f8fa;
@@ -40,8 +41,8 @@
   --amber:#b3760f; --amber-glow:rgba(179,118,15,.12);
   --red:#c8382f; --red-glow:rgba(200,56,47,.10);
   --txt:#161a22; --mut:#5b6577; --faint:#8792a3;
+  --topbar-bg:rgba(255,255,255,.92); --tabbar-bg:rgba(255,255,255,.96);
 }
-:root[data-theme="light"] .brand-mark{color:#161a22}
 :root[data-theme="light"] .gate{
   background:
     radial-gradient(700px 380px at 50% -10%,rgba(13,143,117,.08),transparent 70%),
@@ -167,13 +168,6 @@ a{color:var(--teal)}
 @media(max-width:520px){.gate-box{padding:20px}.gate-box .field{margin-bottom:10px}}
 @media(max-height:700px){.gate-box{padding:16px}.gate-box .field{margin-bottom:8px}.gate-foot{margin-top:10px}}
 .gate-foot{margin:16px 0 0;font-size:13px;color:var(--mut);text-align:center}
-.brand-mark{
-  font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.14em;color:#fff;
-}
-.brand-tag{
-  background:var(--teal);color:#04120e;font-family:var(--mono);font-size:9px;font-weight:600;
-  padding:3px 6px;border-radius:3px;letter-spacing:.1em;
-}
 .msg{
   padding:10px 12px;border-radius:var(--r);font-size:12.5px;margin-bottom:14px;display:none;
 }
@@ -184,13 +178,17 @@ a{color:var(--teal)}
 #app{display:none;min-height:100dvh}
 #app.on{display:block}
 .topbar{
-  position:sticky;top:0;z-index:40;height:56px;background:rgba(16,19,25,.92);
+  position:sticky;top:0;z-index:40;height:56px;background:var(--topbar-bg);
   backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);
   display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:16px;
 }
 .topbar .brand{display:flex;align-items:center;gap:9px;min-width:0}
 .topbar .brand small{color:var(--faint);font-size:11.5px;white-space:nowrap}
 @media(max-width:860px){.topbar .brand small{display:none}}
+.topbar-logo{height:28px;width:auto;display:block}
+.topbar-logo.logo-dark{display:none}
+:root:not([data-theme="light"]) .topbar-logo.logo-light{display:none}
+:root:not([data-theme="light"]) .topbar-logo.logo-dark{display:block}
 .who{display:flex;align-items:center;gap:10px}
 .who-txt{text-align:right;line-height:1.25}
 .who-txt b{display:block;font-size:12.5px;font-weight:600}
@@ -234,7 +232,7 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
   main{padding:20px 16px calc(76px + env(safe-area-inset-bottom))}
   .tabbar{
     display:flex;position:fixed;bottom:0;left:0;right:0;z-index:45;
-    background:rgba(16,19,25,.96);backdrop-filter:blur(12px);
+    background:var(--tabbar-bg);backdrop-filter:blur(12px);
     border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));
   }
   .tabbar .navbtn{
@@ -618,7 +616,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
 <div id="app">
   <header class="topbar">
     <div class="brand">
-      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
+      <img class="topbar-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+      <img class="topbar-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
       <small>Raw &amp; packing material testing portal</small>
     </div>
     <div class="who">
