@@ -134,30 +134,37 @@ a{color:var(--teal)}
 
 /* ---------- gate screens (setup / sign in) ---------- */
 .gate{
-  min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;
+  height:100dvh;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  padding:16px 24px;box-sizing:border-box;
   background:
     radial-gradient(900px 460px at 50% -10%,rgba(18,179,148,.10),transparent 70%),
     var(--ink);
 }
-.gate-card{width:100%;max-width:520px;text-align:center}
+.gate-card{width:100%;max-width:520px;text-align:center;max-height:100%;overflow:auto}
 .gate-brand{display:flex;align-items:center;gap:9px;margin-bottom:6px}
-.gate-logo{max-width:260px;width:75%;height:auto;margin:0 auto;display:block}
-.gate-wordmark{
-  font-family:var(--sans);font-size:16px;font-weight:500;letter-spacing:.01em;
-  color:var(--txt);margin-top:12px;text-align:center;
-}
-@media(max-width:520px){.gate-logo{max-width:200px}.gate-wordmark{font-size:14px}}
+.gate-logo{width:min(80%,360px);height:auto;margin:0 auto;display:block}
+.gate-logo.logo-dark{display:none}
+:root:not([data-theme="light"]) .gate-logo.logo-light{display:none}
+:root:not([data-theme="light"]) .gate-logo.logo-dark{display:block}
+@media(max-height:760px){.gate-logo{width:min(60%,240px)}}
+@media(max-width:520px){.gate-logo{width:min(58%,220px)}}
+@media(max-height:700px){.gate-logo{width:min(40%,150px)}}
 .gate h1{
-  font-family:var(--serif);font-size:38px;margin:22px 0 32px;font-weight:700;
+  font-family:var(--serif);font-size:34px;margin:18px 0 24px;font-weight:700;
   letter-spacing:-.01em;color:var(--txt);line-height:1.15;
 }
-@media(max-width:520px){.gate h1{font-size:28px;margin:18px 0 24px}}
+@media(max-height:760px){.gate h1{font-size:26px;margin:12px 0 18px}}
+@media(max-width:520px){.gate h1{font-size:24px;margin:12px 0 18px}}
+@media(max-height:700px){.gate h1{font-size:20px;margin:8px 0 12px}}
 .gate p.sub{color:var(--mut);margin:0 0 24px;font-size:13px}
 .gate-box{
   background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:32px;
   text-align:left;box-shadow:0 10px 40px rgba(0,0,0,.10);
 }
-.gate-foot{margin:20px 0 0;font-size:13px;color:var(--mut);text-align:center}
+@media(max-height:760px){.gate-box{padding:22px}.gate-box .field{margin-bottom:10px}}
+@media(max-width:520px){.gate-box{padding:20px}.gate-box .field{margin-bottom:10px}}
+@media(max-height:700px){.gate-box{padding:16px}.gate-box .field{margin-bottom:8px}.gate-foot{margin-top:10px}}
+.gate-foot{margin:16px 0 0;font-size:13px;color:var(--mut);text-align:center}
 .brand-mark{
   font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.14em;color:#fff;
 }
@@ -514,8 +521,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
-    <div class="gate-wordmark">hemas consumer brands</div>
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
     <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="setup-msg"></div>
@@ -540,8 +547,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
-    <div class="gate-wordmark">hemas consumer brands</div>
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
     <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="auth-msg"></div>
@@ -566,8 +573,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
-    <div class="gate-wordmark">hemas consumer brands</div>
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
     <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="signup-msg"></div>
