@@ -145,6 +145,9 @@ a{color:var(--teal)}
 .gate.no-scroll .gate-card{max-height:100%;overflow:auto}
 .gate-brand{display:flex;align-items:center;gap:9px;margin-bottom:6px}
 .gate-logo{width:min(80%,360px);height:auto;margin:0 auto;display:block}
+.gate-logo.logo-dark{display:none}
+:root:not([data-theme="light"]) .gate-logo.logo-light{display:none}
+:root:not([data-theme="light"]) .gate-logo.logo-dark{display:block}
 @media(max-height:760px){.gate-logo{width:min(60%,240px)}}
 @media(max-width:520px){.gate-logo{width:min(58%,220px)}}
 @media(max-height:700px){.gate.no-scroll .gate-logo{width:min(40%,150px)}}
@@ -520,7 +523,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
     <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="setup-msg"></div>
@@ -545,7 +549,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
     <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="auth-msg"></div>
@@ -570,7 +575,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
     <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="signup-msg"></div>
