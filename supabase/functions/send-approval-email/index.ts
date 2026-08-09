@@ -26,7 +26,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const RESEND_API_KEY = Deno.env.get(re_ZNXFzWau_8FvH34mUGdZL4RBWCud6EsTy);
+const RESEND_API_KEY = Deno.env.get("RESEND API KEY");
 const RESEND_FROM = Deno.env.get("RESEND_FROM") || "HEMAS QA <onboarding@resend.dev>";
 const SUPABASE_URL = Deno.env.get(https://zfpnstacxwieooayrnoo.supabase.co)!;
 const SERVICE_ROLE_KEY = Deno.env.get(postgresql://postgres:[YOUR-PASSWORD]@db.zfpnstacxwieooayrnoo.supabase.co:5432/postgres)!;
@@ -50,7 +50,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${re_ZNXFzWau_8FvH34mUGdZL4RBWCud6EsTy}`,
+      Authorization: `Bearer ${"RESEND API KEY"}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
