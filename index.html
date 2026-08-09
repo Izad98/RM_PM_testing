@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#101319" id="meta-theme-color">
-<title>HEMAS QA System — Material Testing Portal</title>
+<title>RM &amp; PM Releasing Portal — Hemas Consumer Brands</title>
 <script>
 /* Apply saved theme before first paint to avoid a flash of the wrong colors. */
 (function(){
@@ -17,7 +17,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
@@ -30,6 +30,7 @@
   --txt:#e9edf2; --mut:#8792a3; --faint:#5c6577;
   --sans:'IBM Plex Sans',system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --serif:'Playfair Display',Georgia,'Times New Roman',serif;
   --r:6px;
 }
 :root[data-theme="light"]{
@@ -55,17 +56,18 @@ body{
   transition:background-color .15s,color .15s;
 }
 .theme-toggle{
-  width:34px;height:34px;border-radius:8px;background:var(--raise);border:1px solid var(--line);
-  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--mut);
-  transition:color .15s,border-color .15s;
+  width:40px;height:40px;border-radius:50%;background:var(--panel);border:1px solid var(--line);
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--txt);
+  transition:color .15s,border-color .15s,transform .1s;box-shadow:0 2px 10px rgba(0,0,0,.12);
 }
 .theme-toggle:hover{color:var(--teal);border-color:var(--teal-dim)}
-.theme-toggle svg{width:17px;height:17px}
+.theme-toggle:active{transform:scale(.94)}
+.theme-toggle svg{width:18px;height:18px}
 .theme-toggle .i-sun{display:none}
 :root[data-theme="light"] .theme-toggle .i-sun{display:block}
 :root[data-theme="light"] .theme-toggle .i-moon{display:none}
-.gate-top{position:absolute;top:18px;right:18px}
-@media(max-width:520px){.gate-top{top:12px;right:12px}}
+.gate-top{position:absolute;top:22px;right:24px;z-index:2}
+@media(max-width:520px){.gate-top{top:14px;right:14px}}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
 button{cursor:pointer;border:none;background:none}
 a{color:var(--teal)}
@@ -134,14 +136,23 @@ a{color:var(--teal)}
 .gate{
   min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;
   background:
-    radial-gradient(700px 380px at 50% -10%,rgba(18,179,148,.10),transparent 70%),
+    radial-gradient(900px 460px at 50% -10%,rgba(18,179,148,.10),transparent 70%),
     var(--ink);
 }
-.gate-card{width:100%;max-width:390px}
+.gate-card{width:100%;max-width:520px;text-align:center}
 .gate-brand{display:flex;align-items:center;gap:9px;margin-bottom:6px}
-.gate h1{font-size:20px;margin:18px 0 6px;font-weight:600;letter-spacing:-.01em}
+.gate-logo{max-width:190px;width:60%;height:auto;margin:0 auto;display:block}
+.gate h1{
+  font-family:var(--serif);font-size:38px;margin:22px 0 32px;font-weight:700;
+  letter-spacing:-.01em;color:var(--txt);line-height:1.15;
+}
+@media(max-width:520px){.gate h1{font-size:28px;margin:18px 0 24px}}
 .gate p.sub{color:var(--mut);margin:0 0 24px;font-size:13px}
-.gate-box{background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;padding:24px}
+.gate-box{
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:32px;
+  text-align:left;box-shadow:0 10px 40px rgba(0,0,0,.10);
+}
+.gate-foot{margin:20px 0 0;font-size:13px;color:var(--mut);text-align:center}
 .brand-mark{
   font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.14em;color:#fff;
 }
@@ -498,11 +509,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <div class="gate-brand">
-      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
-    </div>
-    <h1>Connect your Supabase project</h1>
-    <p class="sub">Paste the project URL and anon key from Supabase → Project Settings → API. They are stored in this browser only.</p>
+    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="setup-msg"></div>
       <div class="field">
@@ -526,11 +534,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <div class="gate-brand">
-      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
-    </div>
-    <h1>Material testing portal</h1>
-    <p class="sub">Raw and packing material samples, from hand-over to release.</p>
+    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="auth-msg"></div>
       <div class="field">
@@ -542,10 +547,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <input id="log-pass" type="password" autocomplete="current-password" placeholder="••••••••">
       </div>
       <button class="btn" style="width:100%" id="btn-login">Sign in</button>
-      <p style="text-align:center;margin:16px 0 0;font-size:12.5px;color:var(--mut)">
-        New to the portal? <a href="#" id="link-to-signup">Create an account</a>
-      </p>
     </div>
+    <p class="gate-foot">New to the portal? <a href="#" id="link-to-signup">Create an account</a></p>
   </div>
 </div>
 
@@ -556,11 +559,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
   </button></div>
   <div class="gate-card">
-    <div class="gate-brand">
-      <span class="brand-mark">HEMAS</span><span class="brand-tag">QA</span>
-    </div>
-    <h1>Create your account</h1>
-    <p class="sub">Sign up as Procurement or QA. An admin reviews and approves every new account before it can sign in.</p>
+    <img class="gate-logo" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <h1>RM &amp; PM Releasing Portal</h1>
     <div class="gate-box">
       <div class="msg" id="signup-msg"></div>
       <div class="field">
@@ -592,10 +592,8 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <input id="su-pass2" type="password" autocomplete="new-password" placeholder="Retype your password">
       </div>
       <button class="btn" style="width:100%" id="btn-signup">Create account</button>
-      <p style="text-align:center;margin:16px 0 0;font-size:12.5px;color:var(--mut)">
-        Already approved? <a href="#" id="link-to-login">Sign in</a>
-      </p>
     </div>
+    <p class="gate-foot">Already approved? <a href="#" id="link-to-login">Sign in</a></p>
   </div>
 </div>
 
