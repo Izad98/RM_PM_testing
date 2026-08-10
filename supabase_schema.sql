@@ -128,3 +128,14 @@ create policy profiles_update_admin on public.profiles
   for update
   using (public.is_admin())
   with check (public.is_admin());
+
+-- ---------------------------------------------------------------------
+-- 4. No two accounts on the same email
+-- ---------------------------------------------------------------------
+-- auth.users already enforces unique emails, so this should never fire
+-- in practice — it's a belt-and-braces guard directly on profiles too,
+-- in case a future migration or manual insert ever bypasses the trigger.
+alter table public.profiles
+  drop constraint if exists profiles_email_key;
+alter table public.profiles
+  add constraint profiles_email_key unique (email);
