@@ -56,17 +56,33 @@ don't test or approve anything).
 Without this step, the workflow still fully works — the in-app
 notification bell is the source of truth. This step adds an email on top.
 
-1. Create a [Resend](https://resend.com) account and verify a sending
-   domain (or use their `onboarding@resend.dev` sender to test before
-   your domain is verified).
-2. From the project folder:
+Uses [Brevo](https://brevo.com) (free, 300 emails/day, no credit card).
+Unlike most providers, Brevo doesn't require verifying a *domain* (DNS
+records etc.) — just a single sender *email address*, confirmed by
+clicking a link it emails you. If you don't own a domain, this is the
+easy path.
+
+1. Sign up free at brevo.com.
+2. **Settings → Senders, Domains & Dedicated IPs → Senders → Add a
+   Sender.** Enter any email address you actually control (your own
+   Gmail, work email, whatever). Brevo emails that address a confirmation
+   link — click it. That's the whole "verification," no DNS needed.
+3. **Settings → SMTP & API → API Keys → Generate a new API key.**
+4. Deploy the function and set its secrets:
    ```
    supabase functions deploy send-approval-email
-   supabase secrets set RESEND_API_KEY=re_xxxxxxxx
-   supabase secrets set RESEND_FROM="HEMAS QA <qa@yourverifieddomain.com>"
+   supabase secrets set BREVO_API_KEY=xkeysib-xxxxxxxx
+   supabase secrets set BREVO_FROM_EMAIL=you@example.com
+   supabase secrets set BREVO_FROM_NAME="HEMAS QA"
    ```
-   (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are provided automatically
+   (`BREVO_FROM_EMAIL` must be the exact address you verified in step 2.
+   `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are provided automatically
    by the Edge Functions runtime — don't set those yourself.)
+
+If you deploy via the Supabase **dashboard UI** instead of the CLI, make
+sure the function's name is exactly `send-approval-email` — the dashboard
+suggests a random name (e.g. "bright-processor") by default, and the app
+calls it by that exact name.
 
 If the function isn't deployed, or a send fails, the app just moves on
 silently — the in-app notification already went out.
