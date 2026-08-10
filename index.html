@@ -1099,8 +1099,13 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
     <div class="field" style="margin-bottom:0">
       <label class="req">Your signature</label>
       <div class="sigpad-wrap"><canvas id="sa-sig"></canvas>
-        <div class="sigpad-foot"><span>Sign with your finger, stylus or mouse</span>
-          <button class="btn ghost sm" type="button" id="btn-clear-sa-sig">Clear</button></div>
+        <div class="sigpad-foot"><span>Sign, or upload a signature image</span>
+          <span style="display:flex;gap:6px">
+            <button class="btn ghost sm" type="button" id="btn-upload-sa-sig">Upload image</button>
+            <input type="file" id="sa-sig-file" accept="image/*" style="display:none">
+            <button class="btn ghost sm" type="button" id="btn-clear-sa-sig">Clear</button>
+          </span>
+        </div>
       </div>
     </div>
     <div class="msg" id="sa-msg"></div>
@@ -1255,6 +1260,11 @@ function createSignaturePad(canvas) {
   const ctx = canvas.getContext('2d');
   let drawing = false, hasInk = false, dpr = 1;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  // 'draw' = hand-drawn ink (cropped to its bounding box on export);
+  // 'image' = an uploaded signature image (exported as-is, already
+  // downscaled). Starting to draw again always drops back to 'draw' mode.
+  let mode = 'draw';
+  let uploadedDataUrl = null;
 
   function paintBg() {
     ctx.save();
@@ -1280,6 +1290,13 @@ function createSignaturePad(canvas) {
   }
   function start(e) {
     e.preventDefault();
+    if (mode === 'image') {
+      mode = 'draw';
+      uploadedDataUrl = null;
+      hasInk = false;
+      minX = Infinity; minY = Infinity; maxX = -Infinity; maxY = -Infinity;
+      paintBg();
+    }
     drawing = true;
     const { x, y } = pos(e);
     ctx.beginPath();
@@ -1317,15 +1334,56 @@ function createSignaturePad(canvas) {
   }
   activePads.push(destroy);
 
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('That file could not be read as an image.'));
+        img.src = reader.result;
+      };
+      reader.onerror = () => reject(new Error('That file could not be read.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   return {
     clear() {
+      mode = 'draw';
+      uploadedDataUrl = null;
       hasInk = false;
       minX = Infinity; minY = Infinity; maxX = -Infinity; maxY = -Infinity;
       paintBg();
     },
     isEmpty() { return !hasInk; },
+    // Downscales the uploaded image (max 500x200) and flattens it onto a
+    // white background, so it stores and prints just like a drawn one.
+    async setImage(file) {
+      const img = await loadImage(file);
+      const maxW = 500, maxH = 200;
+      const scale = Math.min(1, maxW / img.width, maxH / img.height);
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const out = document.createElement('canvas');
+      out.width = w; out.height = h;
+      const octx = out.getContext('2d');
+      octx.fillStyle = '#fff';
+      octx.fillRect(0, 0, w, h);
+      octx.drawImage(img, 0, 0, w, h);
+      uploadedDataUrl = out.toDataURL('image/png', 0.92);
+      mode = 'image';
+      hasInk = true;
+
+      paintBg();
+      const availW = canvas.clientWidth, availH = canvas.clientHeight;
+      const fitScale = Math.min(availW / w, availH / h, 1);
+      const dw = w * fitScale, dh = h * fitScale;
+      ctx.drawImage(out, (availW - dw) / 2, (availH - dh) / 2, dw, dh);
+    },
     toDataURL() {
       if (!hasInk) return null;
+      if (mode === 'image') return uploadedDataUrl;
       const pad = 8;
       const x = Math.max(0, minX - pad), y = Math.max(0, minY - pad);
       const w = Math.min(canvas.clientWidth, maxX + pad) - x;
@@ -1341,6 +1399,17 @@ function createSignaturePad(canvas) {
     },
     destroy,
   };
+}
+
+async function applySignatureUpload(pad, file) {
+  if (!file || !pad) return;
+  if (!file.type.startsWith('image/')) return toast('Please choose an image file.', 'err');
+  if (file.size > 4 * 1024 * 1024) return toast('That image is too large. Use one under 4 MB.', 'err');
+  try {
+    await pad.setImage(file);
+  } catch (e) {
+    toast(e.message || 'Could not load that image.', 'err');
+  }
 }
 
 const can = {
@@ -2035,8 +2104,13 @@ function renderApprovalCard(x) {
         <div class="field">
           <label>Your signature</label>
           <div class="sigpad-wrap"><canvas id="dr-approver-sig"></canvas>
-            <div class="sigpad-foot"><span>Sign to approve and release</span>
-              <button class="btn ghost sm" type="button" id="btn-clear-approver-sig">Clear</button></div>
+            <div class="sigpad-foot"><span>Sign, or upload a signature image</span>
+              <span style="display:flex;gap:6px">
+                <button class="btn ghost sm" type="button" id="btn-upload-approver-sig">Upload image</button>
+                <input type="file" id="dr-approver-sig-file" accept="image/*" style="display:none">
+                <button class="btn ghost sm" type="button" id="btn-clear-approver-sig">Clear</button>
+              </span>
+            </div>
           </div>
         </div>
         <div class="grid2">
@@ -2054,6 +2128,11 @@ function renderApprovalCard(x) {
         </div>`;
       approverPad = createSignaturePad($('dr-approver-sig'));
       $('btn-clear-approver-sig').onclick = () => approverPad.clear();
+      $('btn-upload-approver-sig').onclick = () => $('dr-approver-sig-file').click();
+      $('dr-approver-sig-file').addEventListener('change', async (e) => {
+        await applySignatureUpload(approverPad, e.target.files[0]);
+        e.target.value = '';
+      });
       $('btn-reject').onclick = () => { $('dr-reject-box').style.display = ''; };
       $('btn-reject-confirm').onclick = () => submitDecision(x, 'rejected');
       $('btn-approve').onclick = () => submitDecision(x, 'approved');
@@ -2340,6 +2419,11 @@ function openSendApprovalModal() {
   analystPad = createSignaturePad($('sa-sig'));
 }
 $('btn-clear-sa-sig').onclick = () => analystPad?.clear();
+$('btn-upload-sa-sig').onclick = () => $('sa-sig-file').click();
+$('sa-sig-file').addEventListener('change', async (e) => {
+  await applySignatureUpload(analystPad, e.target.files[0]);
+  e.target.value = '';
+});
 $('btn-sa-cancel').onclick = () => { $('modal-approval').classList.remove('on'); destroyPads(); };
 $('modal-approval').addEventListener('click', (e) => {
   if (e.target.id === 'modal-approval') { $('modal-approval').classList.remove('on'); destroyPads(); }
