@@ -1511,12 +1511,20 @@ async function signUp() {
 
   if (error) {
     let friendly = error.message;
-    if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+    if (/already (been )?registered|already exists/i.test(error.message)) {
       friendly = 'An account with that email already exists. Try signing in instead.';
-    } else if (error.message.includes('rate limit')) {
+    } else if (/rate limit/i.test(error.message)) {
       friendly = 'Too many sign-up attempts right now. Please wait a few minutes and try again.';
     }
     return showMsg('signup-msg', friendly);
+  }
+
+  // Supabase doesn't error on a duplicate email when it can't tell you that
+  // without leaking whether the address is registered (avoids account
+  // enumeration) — instead it returns a "successful" signUp with an empty
+  // identities array. Catch that here so it doesn't look like a fresh signup.
+  if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    return showMsg('signup-msg', 'An account with that email already exists. Try signing in instead.');
   }
 
   ['su-name','su-email','su-post','su-pass','su-pass2'].forEach(id => $(id).value = '');
