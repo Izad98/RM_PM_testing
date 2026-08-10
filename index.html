@@ -2263,14 +2263,19 @@ function renderQr(elId, text) {
   new QRCode(el, { text, width: 64, height: 64, correctLevel: QRCode.CorrectLevel.M });
 }
 
-/* ---- save / release / delete ---- */
-async function persist() {
+/* ---- save / release / delete ----
+   persist() returns true/false so callers (like the send-for-approval
+   flow below) can save the current form state and only continue on
+   success — otherwise "Send for approval" could hand off a signature
+   for results that were never actually written to the database. */
+async function persist(opts = {}) {
+  const { silent = false } = opts;
   const x = S.editing;
-  if (!x) return;
+  if (!x) return false;
   const rows = collectRows();
 
   const btn = $('btn-save-report');
-  busy(btn, true);
+  if (!silent) busy(btn, true);
 
   let photo_path = x.photo_path;
   if (S.photoFile) {
@@ -2279,8 +2284,9 @@ async function persist() {
     const up = await S.sb.storage.from('sample-photos')
       .upload(path, S.photoFile, { upsert: true, contentType: S.photoFile.type });
     if (up.error) {
-      busy(btn, false, 'Save results');
-      return toast('Photo did not upload: ' + up.error.message, 'err');
+      if (!silent) busy(btn, false, 'Save results');
+      toast('Photo did not upload: ' + up.error.message, 'err');
+      return false;
     }
     photo_path = S.sb.storage.from('sample-photos').getPublicUrl(path).data.publicUrl;
   }
@@ -2298,15 +2304,16 @@ async function persist() {
   };
 
   const { error } = await S.sb.from('samples').update(patch).eq('id', x.id);
-  busy(btn, false, 'Save results');
-  if (error) return toast(error.message, 'err');
+  if (!silent) busy(btn, false, 'Save results');
+  if (error) { toast(error.message, 'err'); return false; }
 
-  toast('Results saved.');
+  if (!silent) toast('Results saved.');
   S.photoFile = null;
   await loadSamples();
   S.editing = S.samples.find(s => s.id === x.id);
   drawChain(S.editing);
-  go(S.view);
+  if (!silent) go(S.view);
+  return true;
 }
 $('btn-save-report').onclick = () => persist();
 
@@ -2347,6 +2354,17 @@ $('btn-sa-send').onclick = async () => {
   showMsg('sa-msg', '');
 
   busy($('btn-sa-send'), true);
+
+  // Save the current form (test results, final status, comments, date
+  // tested, photo) before creating the approval request — otherwise
+  // anything typed since the last "Save results" click would only ever
+  // have existed in this tab and would vanish once the drawer closes.
+  const saved = await persist({ silent: true });
+  if (!saved) {
+    busy($('btn-sa-send'), false, 'Send for approval');
+    return showMsg('sa-msg', 'Could not save your results — try again.');
+  }
+
   const { error } = await S.sb.rpc('request_approval', {
     p_sample_id: x.id,
     p_approver_email: email,
