@@ -27,7 +27,16 @@
 // them yourself.)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+
+// Inlined rather than imported from ../_shared/cors.ts: the Supabase
+// dashboard's function editor deploys only the one file you paste in, not
+// the rest of supabase/functions/ — a cross-file import there fails with
+// "Module not found ... _shared/cors.ts". Keeping this self-contained
+// means it deploys the same way via the CLI or a dashboard paste.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
