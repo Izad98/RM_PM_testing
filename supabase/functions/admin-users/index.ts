@@ -111,6 +111,10 @@ Deno.serve(async (req) => {
         designation: designation || null,
         role, is_active: true, status: "approved",
         approved_by: caller.id, approved_at: new Date().toISOString(),
+        // The password above is one an admin typed in, not the user's own
+        // choice — force them to replace it with something only they know
+        // the first time they sign in.
+        must_change_password: true,
       }, { onConflict: "id" });
       if (upsertErr) {
         // The auth user exists but the profile write failed — surface it
