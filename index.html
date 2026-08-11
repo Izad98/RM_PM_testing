@@ -1550,7 +1550,7 @@ async function enterApp() {
   if (prof.status === 'pending') {
     await S.sb.auth.signOut();
     showGate('screen-auth');
-    return showMsg('auth-msg', 'Your account is still waiting for admin approval.');
+    return showMsg('auth-msg', 'Waiting for admin approval. Please contact your admin to approve your account.');
   }
   if (prof.status === 'rejected') {
     await S.sb.auth.signOut();
