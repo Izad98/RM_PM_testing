@@ -612,9 +612,12 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <label>Work email</label>
         <input id="log-email" type="email" autocomplete="username" placeholder="name@hemas.com">
       </div>
-      <div class="field">
+      <div class="field" style="margin-bottom:8px">
         <label>Password</label>
         <input id="log-pass" type="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <div style="text-align:right;margin-bottom:14px">
+        <a href="#" id="link-to-forgot" style="font-size:12px">Forgot password?</a>
       </div>
       <button class="btn" style="width:100%" id="btn-login">Sign in</button>
     </div>
@@ -665,6 +668,56 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
       <button class="btn" style="width:100%" id="btn-signup">Create account</button>
     </div>
     <p class="gate-foot">Already approved? <a href="#" id="link-to-login">Sign in</a></p>
+  </div>
+</div>
+
+<!-- ============ 4. FORGOT PASSWORD ============ -->
+<div class="gate no-scroll" id="screen-forgot" style="display:none">
+  <div class="gate-top"><button class="theme-toggle" id="theme-toggle-forgot" title="Switch theme" aria-label="Switch theme">
+    <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button></div>
+  <div class="gate-card">
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <h1>RM &amp; PM Releasing Portal</h1>
+    <div class="gate-box">
+      <div class="msg" id="forgot-msg"></div>
+      <p style="margin:0 0 16px;font-size:12.5px;color:var(--mut)">Enter your work email and we'll send you a link to reset your password.</p>
+      <div class="field">
+        <label class="req">Work email</label>
+        <input id="forgot-email" type="email" autocomplete="username" placeholder="name@hemas.com">
+      </div>
+      <button class="btn" style="width:100%" id="btn-forgot">Send reset link</button>
+    </div>
+    <p class="gate-foot">Remembered it? <a href="#" id="link-to-login-from-forgot">Sign in</a></p>
+  </div>
+</div>
+
+<!-- ============ 5. SET A NEW PASSWORD (forced on first sign-in, or via a reset link) ============ -->
+<div class="gate no-scroll" id="screen-set-password" style="display:none">
+  <div class="gate-top"><button class="theme-toggle" id="theme-toggle-setpass" title="Switch theme" aria-label="Switch theme">
+    <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+  </button></div>
+  <div class="gate-card">
+    <img class="gate-logo logo-light" src="hcb logo.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <img class="gate-logo logo-dark" src="hcb logo dark.png" alt="Hemas Consumer Brands" onerror="this.style.visibility='hidden'">
+    <h1>RM &amp; PM Releasing Portal</h1>
+    <div class="gate-box">
+      <div class="msg" id="setpass-msg"></div>
+      <p id="setpass-intro" style="margin:0 0 16px;font-size:12.5px;color:var(--mut)"></p>
+      <div class="field">
+        <label class="req">New password</label>
+        <input id="setpass-pass" type="password" autocomplete="new-password" placeholder="At least 8 characters">
+      </div>
+      <div class="field">
+        <label class="req">Confirm new password</label>
+        <input id="setpass-pass2" type="password" autocomplete="new-password" placeholder="Retype your password">
+      </div>
+      <button class="btn" style="width:100%" id="btn-setpass">Set password</button>
+    </div>
+    <p class="gate-foot"><a href="#" id="link-cancel-setpass">Cancel and sign out</a></p>
   </div>
 </div>
 
@@ -912,7 +965,7 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
             <div class="field">
               <label class="req">Temporary password</label>
               <input id="u-pass" type="text" placeholder="At least 8 characters">
-              <div class="hint">Share it once, ask them to change it after signing in.</div>
+              <div class="hint">Share it once — they'll be required to set their own password the first time they sign in.</div>
             </div>
             <button class="btn" style="width:100%" id="btn-adduser">Add user</button>
           </div>
@@ -1176,13 +1229,14 @@ function applyTheme(t) {
 function toggleTheme() {
   applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
 }
-['theme-toggle-setup','theme-toggle-auth','theme-toggle-signup','theme-toggle-app'].forEach(id => {
+['theme-toggle-setup','theme-toggle-auth','theme-toggle-signup','theme-toggle-forgot','theme-toggle-setpass','theme-toggle-app'].forEach(id => {
   $(id).onclick = toggleTheme;
 });
 
 /* -------------------------- gate screens ----------------------------- */
 function showGate(id) {
-  ['screen-setup','screen-auth','screen-signup'].forEach(g => { $(g).style.display = g === id ? 'flex' : 'none'; });
+  ['screen-setup','screen-auth','screen-signup','screen-forgot','screen-set-password']
+    .forEach(g => { $(g).style.display = g === id ? 'flex' : 'none'; });
 }
 
 const S = {
@@ -1196,6 +1250,7 @@ const S = {
   editing: null,     // sample currently open in the drawer
   photoData: null,   // dataURL of a newly picked photo
   photoFile: null,
+  inRecovery: false, // true once a password-recovery link has been followed
 };
 
 // Signature pads currently mounted (approver inline pad + send-for-approval
@@ -1438,7 +1493,22 @@ async function boot() {
   const cfg = getCfg();
   if (!cfg?.url || !cfg?.key) { showGate('screen-setup'); return; }
   S.sb = supabase.createClient(cfg.url, cfg.key);
+
+  // Following a "reset your password" email link lands back here with a
+  // temporary recovery session; supabase-js detects it from the URL and
+  // fires this event. Send straight to the set-password screen rather
+  // than into the app — checked again after getSession() below in case
+  // the event fires only after that call resolves.
+  S.sb.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      S.inRecovery = true;
+      $('setpass-intro').textContent = 'Choose a new password for your account.';
+      showGate('screen-set-password');
+    }
+  });
+
   const { data: { session } } = await S.sb.auth.getSession();
+  if (S.inRecovery) return;
   if (session) { await enterApp(); } else { showGate('screen-auth'); }
 }
 
@@ -1532,6 +1602,71 @@ async function signUp() {
   showMsg('auth-msg', `Thanks, ${full_name.split(' ')[0]}. Your account is waiting for admin approval — you'll be able to sign in once it's authorized.`, 'ok');
 }
 
+/* --------------------------- forgot password ------------------------- */
+$('link-to-forgot').onclick = (e) => { e.preventDefault(); showMsg('forgot-msg', ''); showGate('screen-forgot'); };
+$('link-to-login-from-forgot').onclick = (e) => { e.preventDefault(); showMsg('auth-msg', ''); showGate('screen-auth'); };
+
+$('btn-forgot').onclick = sendResetLink;
+$('forgot-email').addEventListener('keydown', e => { if (e.key === 'Enter') sendResetLink(); });
+
+async function sendResetLink() {
+  const email = $('forgot-email').value.trim();
+  if (!email) return showMsg('forgot-msg', 'Enter your work email.');
+  showMsg('forgot-msg', '');
+  busy($('btn-forgot'), true);
+  const { error } = await S.sb.auth.resetPasswordForEmail(email, {
+    redirectTo: location.origin + location.pathname,
+  });
+  busy($('btn-forgot'), false, 'Send reset link');
+
+  if (error && /rate limit/i.test(error.message)) {
+    return showMsg('forgot-msg', 'Too many attempts right now. Please wait a few minutes and try again.');
+  }
+  // Supabase never reveals whether an email has an account here, and
+  // neither do we — same message either way so this can't be used to
+  // probe who has a login.
+  $('forgot-email').value = '';
+  showMsg('forgot-msg', "If that email has an account, we've sent a link to reset the password. Check your inbox.", 'ok');
+}
+
+/* ------------------------- set a new password ------------------------ */
+$('btn-setpass').onclick = submitSetPassword;
+['setpass-pass','setpass-pass2'].forEach(id =>
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') submitSetPassword(); }));
+
+async function submitSetPassword() {
+  const p1 = $('setpass-pass').value;
+  const p2 = $('setpass-pass2').value;
+  if (p1.length < 8) return showMsg('setpass-msg', 'Use a password of at least 8 characters.');
+  if (p1 !== p2) return showMsg('setpass-msg', 'Those passwords do not match.');
+  showMsg('setpass-msg', '');
+
+  busy($('btn-setpass'), true);
+  const { error } = await S.sb.auth.updateUser({ password: p1 });
+  if (error) {
+    busy($('btn-setpass'), false, 'Set password');
+    return showMsg('setpass-msg', error.message);
+  }
+
+  // Whichever way this screen was reached — a forced first-time change or
+  // a self-service reset link — the password has now genuinely been
+  // changed, so this always clears the flag. A harmless no-op update if
+  // it was already false.
+  const { data: { user } } = await S.sb.auth.getUser();
+  if (user) await S.sb.from('profiles').update({ must_change_password: false }).eq('id', user.id);
+
+  ['setpass-pass','setpass-pass2'].forEach(id => $(id).value = '');
+  busy($('btn-setpass'), false, 'Set password');
+  toast('Password updated.');
+  await enterApp();
+}
+
+$('link-cancel-setpass').onclick = async (e) => {
+  e.preventDefault();
+  await S.sb.auth.signOut();
+  location.reload();
+};
+
 $('btn-logout').onclick = async () => {
   await S.sb.auth.signOut();
   location.reload();
@@ -1561,6 +1696,12 @@ async function enterApp() {
     await S.sb.auth.signOut();
     showGate('screen-auth');
     return showMsg('auth-msg', 'This account has been switched off. Contact an admin.');
+  }
+  if (prof.must_change_password) {
+    S.me = prof;
+    showMsg('setpass-msg', '');
+    $('setpass-intro').textContent = 'Your admin created this account with a temporary password. Choose a new one to continue.';
+    return showGate('screen-set-password');
   }
 
   S.me = prof;
