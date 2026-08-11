@@ -128,6 +128,10 @@ Deno.serve(async (req) => {
 
     return ok({ error: "Unknown action." });
   } catch (e) {
-    return fail(500, String((e as { message?: string })?.message || e));
+    // Log the real error server-side (visible in the function's logs in
+    // the Supabase dashboard) but never echo exception details — such as
+    // a stack trace or an internal Postgres message — back to the caller.
+    console.error("admin-users unexpected error:", e);
+    return fail(500, "Something went wrong. Try again, or check the function logs.");
   }
 });
