@@ -1,5 +1,14 @@
 # Setting up: manager approval, e-signatures, QR reports
 
+> **Prerequisite:** this assumes `supabase_schema_v1.sql` has already been
+> run — it's what adds `profiles.status`, the sign-up-approval trigger, and
+> the RLS policies the whole portal (sign-in gating, the Users page) relies
+> on. If admin actions on the Users page fail with something like `Could
+> not find the 'status' column of 'profiles' in the schema cache`, that
+> file hasn't been run against this database yet — paste it into the
+> Supabase SQL editor first. It's idempotent, so running it again later
+> (or on a project that already has it) is a safe no-op.
+
 This adds three things to the portal:
 
 1. **Approval workflow** — a QA analyst sends a tested sample to a manager
