@@ -112,3 +112,26 @@ on the lab's behalf (same spirit as how the app already only ever needs
 one login per internal person, never one per external party). Picking
 **Third party** just requires the lab's name and lets R&D attach the
 lab's certificate/report as a file alongside the notes.
+
+## 5. Intake attachments and an R&D contact (`supabase_schema_v6.sql`)
+
+Run [`supabase_schema_v6.sql`](./supabase_schema_v6.sql) after `v5.sql`,
+same idempotent paste-into-the-SQL-editor process. It adds three optional
+fields to the intake form:
+
+- **Sample photo** — a photo of the physical sample as handed over,
+  separate from the QA-side inspection photo taken later during testing.
+- **Supporting documents** — any number of files (COA / TDS / MSDS /
+  etc), added one at a time or several at once, each removable before
+  saving.
+- **R&D responsible person** — who in R&D to notify if this sample later
+  turns out to need stability testing. Purely a heads-up at intake time;
+  it doesn't require or start anything on its own. If Procurement names
+  someone here, **Send to R&D** (§3 above) notifies that person
+  specifically instead of every active R&D account. If left blank,
+  nothing changes from §3's behaviour.
+
+Both the photo and the documents are optional and upload to a new
+`intake-documents` Storage bucket, created directly by this migration
+(same reproducible-on-a-fresh-project approach as `stability-documents`
+in v5 — no manual dashboard step needed, unlike `sample-photos`).
