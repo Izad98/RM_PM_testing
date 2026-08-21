@@ -1,0 +1,15 @@
+{
+  "name": "hemas-rm-pm-releasing-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static file server for the RM & PM Releasing Portal on Azure App Service (Linux/Node). Only used if the Web App plan is Linux — see AZURE_DEPLOYMENT.md.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
