@@ -1,0 +1,46 @@
+name: Deploy to Azure Web App
+
+# Manual-trigger only until IT has provisioned the Web App and added the
+# secrets below — an auto-deploy trigger would just fail on every push
+# until then. Once set up, uncomment the `push` trigger to deploy
+# automatically on every merge to main. See AZURE_DEPLOYMENT.md §4.
+on:
+  workflow_dispatch: {}
+  # push:
+  #   branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Skipped automatically if the Web App plan is Windows/IIS (no
+      # package.json needed there) — harmless either way since `if`
+      # only runs npm install when there's something to install.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies
+        run: npm install --omit=dev
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          # Set this to the Web App's name in the Azure Portal.
+          app-name: 'CHANGE-ME-azure-webapp-name'
+          # Portal → Web App → Overview → "Get publish profile" → paste the
+          # downloaded XML as a repo secret named AZURE_WEBAPP_PUBLISH_PROFILE
+          # (Settings → Secrets and variables → Actions → New repository secret).
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .

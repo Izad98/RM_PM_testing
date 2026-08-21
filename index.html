@@ -677,6 +677,7 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <select id="su-role">
           <option value="procurement">Procurement — hands samples to QA</option>
           <option value="qa">QA — records and releases results</option>
+          <option value="rnd">R&amp;D — stability testing</option>
         </select>
         <div class="hint">Admin access is granted by an existing administrator after sign-up.</div>
       </div>
@@ -887,6 +888,11 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
                 </select>
               </div>
             </div>
+            <div class="field">
+              <label class="req">Handed over by</label>
+              <select id="in-handover"></select>
+              <div class="hint">Who is physically handing this sample to QA.</div>
+            </div>
             <div class="field" style="margin-bottom:0">
               <label>Note to QA</label>
               <textarea id="in-notes" rows="2" placeholder="Anything QA should know before testing"></textarea>
@@ -919,6 +925,16 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
         <div class="reclist" id="approvals-list"></div>
       </section>
 
+      <!-- ===== STABILITY QUEUE (R&D) ===== -->
+      <section class="view" id="v-stability">
+        <div class="page-head">
+          <div class="eyebrow">R&amp;D</div>
+          <h2>Stability testing queue</h2>
+          <p>Samples QA has sent for stability testing, waiting on a result.</p>
+        </div>
+        <div class="reclist" id="stability-list"></div>
+      </section>
+
       <!-- ===== RECORDS ===== -->
       <section class="view" id="v-records">
         <div class="page-head">
@@ -944,6 +960,12 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
             <option value="">Both types</option>
             <option>Raw Material</option>
             <option>Packing Material</option>
+          </select>
+          <select id="f-submitter">
+            <option value="">Anyone submitted</option>
+          </select>
+          <select id="f-material">
+            <option value="">Any material</option>
           </select>
           <button class="btn ghost sm" id="btn-export">Export CSV</button>
         </div>
@@ -982,6 +1004,7 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
               <select id="u-role">
                 <option value="procurement">Procurement — hands samples to QA</option>
                 <option value="qa">QA — records and releases results</option>
+                <option value="rnd">R&amp;D — stability testing</option>
                 <option value="admin">Admin — full access and user control</option>
               </select>
             </div>
@@ -1029,6 +1052,10 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
       <div class="card" style="margin-bottom:14px">
         <h3>Handed over by procurement</h3>
         <div id="dr-intake" style="font-size:12.5px"></div>
+        <div class="field" style="margin:12px 0 0">
+          <label>Received by (QA)</label>
+          <select id="dr-received"></select>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -1058,6 +1085,11 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
           <label>Comments and remarks</label>
           <textarea id="dr-comments" rows="3" placeholder="Observations, deviations, follow-up actions"></textarea>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px" id="dr-stability-card">
+        <h3>Stability testing</h3>
+        <div id="dr-stability-body"></div>
       </div>
 
       <div class="card" style="margin-bottom:14px">
@@ -1134,6 +1166,15 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
 
         <div class="d-sect">4. Sample Inspection Image</div>
         <div class="d-img" id="p-photo">No inspection photo attached</div>
+
+        <div id="p-stability-wrap" style="display:none">
+          <div class="d-sect">5. Stability Testing</div>
+          <table>
+            <tr><th style="width:22%">Performed By</th><td style="width:28%" id="p-stab-performed"></td>
+                <th style="width:22%">Result</th><td id="p-stab-result"></td></tr>
+            <tr><th>Notes</th><td colspan="3" id="p-stab-notes"></td></tr>
+          </table>
+        </div>
 
         <div class="d-sign">
           <div class="sb">
@@ -1283,7 +1324,7 @@ let activePads = [];
 function destroyPads() { activePads.forEach(fn => fn()); activePads = []; }
 let analystPad = null, approverPad = null;
 
-const ROLE_LABEL = { procurement:'Procurement', qa:'Quality Assurance', admin:'Administrator' };
+const ROLE_LABEL = { procurement:'Procurement', qa:'Quality Assurance', rnd:'R&D', admin:'Administrator' };
 
 /* ---------------------------- helpers ------------------------------- */
 function toast(text, kind = 'ok') {
@@ -1493,6 +1534,7 @@ async function applySignatureUpload(pad, file) {
 const can = {
   create: () => ['procurement','admin'].includes(S.me?.role),
   test:   () => ['qa','admin'].includes(S.me?.role),
+  stability: () => ['rnd','admin'].includes(S.me?.role),
   admin:  () => S.me?.role === 'admin',
   decide: (x) => x?.status === 'Pending Approval'
     && (x.requested_approver_id === S.me?.id || S.me?.role === 'admin'),
@@ -1738,8 +1780,10 @@ async function enterApp() {
   $('app').classList.add('on');
 
   if (can.test()) loadApprovers();
+  await loadColleagues();
+  fillPeoplePicker('in-handover', ['procurement','admin'], S.me.id);
   await loadSamples();
-  go(can.test() && !can.admin() ? 'queue' : 'dashboard');
+  go(!can.admin() && can.test() ? 'queue' : !can.admin() && can.stability() ? 'stability' : 'dashboard');
   if (can.admin()) loadUsers();
 
   loadNotifications();
@@ -1753,15 +1797,17 @@ const ICONS = {
   intake:'<path d="M12 5v14M5 12h14"/>',
   queue:'<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
   approvals:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+  stability:'<path d="M9 3h6M10 3v6.5L4.5 19a1 1 0 00.9 1.5h13.2a1 1 0 00.9-1.5L14 9.5V3"/><path d="M7 15h10"/>',
   records:'<path d="M4 6h16M4 12h16M4 18h10"/>',
   users:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>',
 };
 const NAV = [
-  { id:'dashboard',  label:'Dashboard',  short:'Home',    roles:['procurement','qa','admin'] },
+  { id:'dashboard',  label:'Dashboard',  short:'Home',    roles:['procurement','qa','rnd','admin'] },
   { id:'intake',     label:'New sample', short:'New',     roles:['procurement','admin'] },
   { id:'queue',      label:'Test queue', short:'Queue',   roles:['qa','admin'], badge:true },
   { id:'approvals',  label:'Approvals',  short:'Approve', roles:['qa','admin'], badge:true, show: () => S.me?.can_approve === true },
-  { id:'records',    label:'Records',    short:'Records', roles:['procurement','qa','admin'] },
+  { id:'stability',  label:'Stability queue', short:'Stability', roles:['rnd','admin'], badge:true },
+  { id:'records',    label:'Records',    short:'Records', roles:['procurement','qa','rnd','admin'] },
   { id:'users',      label:'Users',      short:'Users',   roles:['admin'], badge:true },
 ];
 
@@ -1834,6 +1880,7 @@ function renderNotifications() {
         const x = S.samples.find(s => s.id === b.dataset.sample);
         if (x) {
           const view = x.status === 'Pending Approval' && x.requested_approver_id === S.me.id ? 'approvals'
+            : x.stability_status === 'Awaiting R&D' && can.stability() ? 'stability'
             : (S.me.role === 'procurement' ? 'records' : 'queue');
           go(view);
           openReport(x.id);
@@ -1856,6 +1903,7 @@ function go(view) {
   if (view === 'dashboard')  renderDashboard();
   if (view === 'queue')      renderQueue();
   if (view === 'approvals')  renderApprovals();
+  if (view === 'stability')  renderStability();
   if (view === 'records')    renderRecords();
   if (view === 'users')      renderUsers();
 }
@@ -1867,6 +1915,16 @@ function renderApprovals() {
     ? mine.map(recCard).join('')
     : emptyState('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
         'Nothing waiting on you', 'Reports your team sends you for approval will show up here.');
+  wireCards(box);
+}
+
+function renderStability() {
+  const waiting = S.samples.filter(x => x.stability_status === 'Awaiting R&D');
+  const box = $('stability-list');
+  box.innerHTML = waiting.length
+    ? waiting.map(recCard).join('')
+    : emptyState('<path d="M9 3h6M10 3v6.5L4.5 19a1 1 0 00.9 1.5h13.2a1 1 0 00.9-1.5L14 9.5V3"/>',
+        'Nothing waiting', 'Samples QA sends for stability testing will show up here.');
   wireCards(box);
 }
 
@@ -1882,12 +1940,32 @@ async function loadSamples() {
   setBadge('queue', waiting);
   const mine = S.samples.filter(s => s.status === 'Pending Approval' && s.requested_approver_id === S.me?.id).length;
   setBadge('approvals', mine);
+  const awaitingStability = S.samples.filter(s => s.stability_status === 'Awaiting R&D').length;
+  setBadge('stability', awaitingStability);
 }
 
 async function loadApprovers() {
   const { data, error } = await S.sb.from('profiles')
     .select('id, email, full_name').eq('can_approve', true).eq('is_active', true);
   if (!error) S.approvers = data || [];
+}
+
+/* Backs the "handed over by" / "received by" people-pickers used across
+   intake, QA results and R&D — all deliberately picked from registered
+   portal users rather than typed as free text. */
+async function loadColleagues() {
+  const { data, error } = await S.sb.from('profiles')
+    .select('id, full_name, designation, role').eq('is_active', true).order('full_name');
+  if (!error) S.colleagues = data || [];
+}
+function fillPeoplePicker(selectId, roles, selectedId) {
+  const sel = $(selectId);
+  if (!sel) return;
+  const people = (S.colleagues || []).filter(p => roles.includes(p.role));
+  sel.innerHTML = people.length
+    ? people.map(p => `<option value="${p.id}"${p.id === selectedId ? ' selected' : ''}>
+        ${esc(p.full_name)}${p.designation ? ' · ' + esc(p.designation) : ''}</option>`).join('')
+    : '<option value="">No one available — ask an admin</option>';
 }
 
 /* --------------------------- dashboard ------------------------------ */
@@ -2048,6 +2126,7 @@ function recCard(x) {
     </div>
     <div class="rec-right">
       ${x.priority === 'Urgent' && x.status !== 'Released' ? '<span class="pill p-urg">Urgent</span>' : ''}
+      ${x.requires_stability_test ? stabilityStatusPill(x.stability_status) : ''}
       ${statusPill(x)}
       <span class="mono" style="font-size:10px;color:var(--faint)">
         ${(x.test_results || []).length} test${(x.test_results || []).length === 1 ? '' : 's'}
@@ -2078,10 +2157,12 @@ $('btn-intake-clear').onclick = () => {
     .forEach(id => $(id).value = '');
   $('in-received').value = today();
   $('in-priority').value = 'Normal';
+  fillPeoplePicker('in-handover', ['procurement','admin'], S.me.id);
   toast('Form cleared.');
 };
 
 $('btn-intake-save').onclick = async () => {
+  const handover = (S.colleagues || []).find(p => p.id === $('in-handover').value);
   const row = {
     doc_ref: $('in-docref').value.trim() || 'QA-STR-01',
     material_type: $('in-type').value,
@@ -2095,12 +2176,16 @@ $('btn-intake-save').onclick = async () => {
     intake_notes: $('in-notes').value.trim(),
     priority: $('in-priority').value,
     submitted_by: S.me.id,
+    handover_by_id: handover?.id || null,
+    handover_by: handover?.full_name || null,
+    handover_by_post: handover?.designation || null,
   };
   const missing = [];
   if (!row.material_description) missing.push('material description');
   if (!row.supplier_name) missing.push('supplier name');
   if (!row.sample_size) missing.push('sample size');
   if (!row.used_for) missing.push('what it is used for');
+  if (!row.handover_by_id) missing.push('who is handing it over');
   if (missing.length) return toast('Still needed: ' + missing.join(', '), 'err');
 
   busy($('btn-intake-save'), true);
@@ -2127,23 +2212,39 @@ function renderQueue() {
 }
 
 /* ----------------------------- records ------------------------------ */
-['f-search','f-status','f-result','f-type'].forEach(id =>
+['f-search','f-status','f-result','f-type','f-submitter','f-material'].forEach(id =>
   $(id).addEventListener('input', renderRecords));
 
 function filtered() {
   const q = $('f-search').value.trim().toLowerCase();
   const st = $('f-status').value, rs = $('f-result').value, tp = $('f-type').value;
+  const sub = $('f-submitter').value, mat = $('f-material').value;
   return S.samples.filter(x => {
     if (st && x.status !== st) return false;
     if (rs && x.final_status !== rs) return false;
     if (tp && x.material_type !== tp) return false;
+    if (sub && x.submitter?.full_name !== sub) return false;
+    if (mat && x.material_description !== mat) return false;
     if (!q) return true;
     return [x.sample_code, x.material_description, x.supplier_name, x.batch_no, x.used_for, x.rnd_ref]
       .join(' ').toLowerCase().includes(q);
   });
 }
 
+/* Rebuilds a filter <select>'s options from whatever distinct values are
+   currently in S.samples, preserving the current selection if it's still
+   one of them. */
+function fillFilterOptions(selectId, values, placeholder) {
+  const sel = $(selectId);
+  const current = sel.value;
+  const unique = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = `<option value="">${placeholder}</option>` +
+    unique.map(v => `<option value="${esc(v)}"${v === current ? ' selected' : ''}>${esc(v)}</option>`).join('');
+}
+
 function renderRecords() {
+  fillFilterOptions('f-submitter', S.samples.map(x => x.submitter?.full_name), 'Anyone submitted');
+  fillFilterOptions('f-material', S.samples.map(x => x.material_description), 'Any material');
   const list = filtered();
   const box = $('rec-list');
   box.innerHTML = list.length
@@ -2196,13 +2297,15 @@ function openReport(id) {
     ['R&D reference', x.rnd_ref],
     ['Used for', x.used_for],
     ['Date received', humanDate(x.date_received)],
-    ['Handed over by', x.submitter?.full_name],
+    ['Handed over by', x.handover_by],
+    ['Logged by', x.submitter?.full_name],
     ['Note to QA', x.intake_notes],
   ].filter(([, v]) => v).map(([k, v]) => `
     <div class="rankrow" style="padding:7px 0">
       <span class="rname" style="color:var(--mut)">${k}</span>
       <span style="text-align:right;font-size:12.5px;max-width:60%">${esc(v)}</span>
     </div>`).join('');
+  fillPeoplePicker('dr-received', ['qa','admin'], x.received_by_id || S.me.id);
 
   $('dr-tested').value = x.date_tested || today();
   $('dr-comments').value = x.comments || '';
@@ -2238,6 +2341,7 @@ function openReport(id) {
   // ancestor is display:none — render the approval card only once the
   // drawer itself is visible, or the pad's backing bitmap ends up 0x0.
   renderApprovalCard(x);
+  renderStabilityCard(x, editable);
   $('dpane-form').scrollTop = 0;
 }
 
@@ -2352,6 +2456,165 @@ async function submitDecision(x, decision) {
   await loadSamples();
   $('drawer').classList.remove('on');
   go(S.view);
+}
+
+/* -------------------------- stability testing ------------------------- */
+function stabilityStatusPill(s) {
+  if (s === 'Pass') return '<span class="pill p-pass">Pass</span>';
+  if (s === 'Fail') return '<span class="pill p-fail">Fail</span>';
+  if (s === 'Awaiting R&D') return '<span class="pill p-wait">Awaiting R&amp;D</span>';
+  return '';
+}
+
+function renderStabilityCard(x, editable) {
+  S.stabilityCertFile = null;
+  const card = $('dr-stability-card');
+  const body = $('dr-stability-body');
+  const status = x.stability_status || 'Not Required';
+
+  if (status === 'Not Required') {
+    if (!can.test() || !editable) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    body.innerHTML = `
+      <p style="margin:0 0 12px;font-size:12.5px;color:var(--mut)">
+        If this material needs a stability study, send it to R&amp;D — the report can't
+        be sent for approval until they record a passing result.
+      </p>
+      <div class="field">
+        <label>Handed over to R&amp;D by</label>
+        <select id="dr-stab-handover"></select>
+      </div>
+      <button class="btn ghost sm" id="btn-send-stability">Send to R&amp;D</button>`;
+    fillPeoplePicker('dr-stab-handover', ['qa','admin'], S.me.id);
+    $('btn-send-stability').onclick = () => sendToStability(x);
+    return;
+  }
+
+  card.style.display = '';
+
+  if (status === 'Awaiting R&D') {
+    const waitBanner = `<div class="banner warn">Sent to R&amp;D by ${esc(x.stability_handover_by || '—')} on ${humanDate(x.stability_requested_at)}.</div>`;
+    if (!can.stability()) {
+      body.innerHTML = waitBanner + `<div style="font-size:12.5px;color:var(--mut)">Waiting on a result.</div>`;
+      return;
+    }
+    body.innerHTML = waitBanner + `
+      <div class="field">
+        <label>Performed</label>
+        <div class="statusbar" id="dr-stab-performed">
+          <button type="button" data-v="Internal R&D">Internal R&amp;D</button>
+          <button type="button" data-v="Third Party">Third party</button>
+        </div>
+      </div>
+      <div class="field" id="dr-stab-lab-field" style="display:none">
+        <label class="req">Lab name</label>
+        <input id="dr-stab-lab" placeholder="e.g. Acme Analytical Labs">
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="dr-stab-notes" rows="2" placeholder="Conditions, observations"></textarea>
+      </div>
+      <div class="field">
+        <label>Certificate / report (optional)</label>
+        <input type="file" id="dr-stab-cert" accept="application/pdf,image/*">
+      </div>
+      <div class="field">
+        <label>Received by (R&amp;D)</label>
+        <select id="dr-stab-received"></select>
+      </div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn" id="btn-stab-pass">Record pass</button>
+        <button class="btn danger" id="btn-stab-fail">Record fail</button>
+      </div>`;
+    fillPeoplePicker('dr-stab-received', ['rnd','admin'], S.me.id);
+    let performedBy = '';
+    $('dr-stab-performed').querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        performedBy = b.dataset.v;
+        $('dr-stab-performed').querySelectorAll('button').forEach(bb => bb.classList.toggle('on', bb === b));
+        $('dr-stab-lab-field').style.display = performedBy === 'Third Party' ? '' : 'none';
+      };
+    });
+    $('dr-stab-cert').addEventListener('change', e => { S.stabilityCertFile = e.target.files[0] || null; });
+    $('btn-stab-pass').onclick = () => submitStabilityResult(x, 'Pass', performedBy);
+    $('btn-stab-fail').onclick = () => submitStabilityResult(x, 'Fail', performedBy);
+    return;
+  }
+
+  // Pass / Fail -- read-only summary for everyone
+  body.innerHTML = `
+    <div class="rankrow" style="padding:0 0 9px">
+      <span class="rname" style="color:var(--mut)">Result</span>
+      ${stabilityStatusPill(status)}
+    </div>
+    <div class="rankrow" style="padding:9px 0">
+      <span class="rname" style="color:var(--mut)">Performed</span>
+      <span style="text-align:right">${esc(x.stability_performed_by || '—')}${x.stability_lab_name ? ' · ' + esc(x.stability_lab_name) : ''}</span>
+    </div>
+    ${x.stability_notes ? `<div class="rankrow" style="padding:9px 0"><span class="rname" style="color:var(--mut)">Notes</span><span style="text-align:right;max-width:65%">${esc(x.stability_notes)}</span></div>` : ''}
+    ${x.stability_certificate_path ? `<div style="padding:9px 0"><a href="${esc(x.stability_certificate_path)}" target="_blank" rel="noopener">View certificate / report</a></div>` : ''}
+    <div style="margin-top:6px;font-size:11.5px;color:var(--faint)">
+      Recorded by ${esc(x.stability_received_by || '—')} on ${humanDate(x.stability_result_set_at)}
+    </div>`;
+}
+
+async function sendToStability(x) {
+  const handoverId = $('dr-stab-handover').value;
+  if (!handoverId) return toast('Pick who is handing this to R&D.', 'err');
+  busy($('btn-send-stability'), true);
+  const { error } = await S.sb.rpc('request_stability_test', {
+    p_sample_id: x.id,
+    p_handover_by_id: handoverId,
+  });
+  busy($('btn-send-stability'), false, 'Send to R&D');
+  if (error) return toast(error.message, 'err');
+  toast(`${x.sample_code} sent to R&D for stability testing.`);
+  await loadSamples();
+  S.editing = S.samples.find(s => s.id === x.id);
+  renderStabilityCard(S.editing, can.test());
+  drawChain(S.editing);
+}
+
+async function submitStabilityResult(x, result, performedBy) {
+  if (!performedBy) return toast('Pick whether this was done internally or by a third party.', 'err');
+  const labName = $('dr-stab-lab').value.trim();
+  if (performedBy === 'Third Party' && !labName) return toast("Enter the third-party lab's name.", 'err');
+  const receivedById = $('dr-stab-received').value;
+  if (!receivedById) return toast('Pick who at R&D handled this.', 'err');
+
+  const btn = result === 'Pass' ? $('btn-stab-pass') : $('btn-stab-fail');
+  busy(btn, true);
+
+  let certPath = null;
+  if (S.stabilityCertFile) {
+    const ext = (S.stabilityCertFile.name.split('.').pop() || 'pdf').toLowerCase();
+    const path = `${x.id}/${Date.now()}.${ext}`;
+    const up = await S.sb.storage.from('stability-documents')
+      .upload(path, S.stabilityCertFile, { upsert: true, contentType: S.stabilityCertFile.type });
+    if (up.error) {
+      busy(btn, false, result === 'Pass' ? 'Record pass' : 'Record fail');
+      return toast('Certificate did not upload: ' + up.error.message, 'err');
+    }
+    certPath = S.sb.storage.from('stability-documents').getPublicUrl(path).data.publicUrl;
+  }
+
+  const { error } = await S.sb.rpc('record_stability_result', {
+    p_sample_id: x.id,
+    p_performed_by: performedBy,
+    p_lab_name: performedBy === 'Third Party' ? labName : null,
+    p_result: result,
+    p_notes: $('dr-stab-notes').value.trim(),
+    p_certificate_path: certPath,
+    p_received_by_id: receivedById,
+  });
+  busy(btn, false, result === 'Pass' ? 'Record pass' : 'Record fail');
+  if (error) return toast(error.message, 'err');
+
+  toast(`${x.sample_code} — stability ${result.toLowerCase()}ed.`);
+  await loadSamples();
+  S.editing = S.samples.find(s => s.id === x.id);
+  renderStabilityCard(S.editing, can.test());
+  drawChain(S.editing);
 }
 
 function notifyEmail(sampleId, type) {
@@ -2492,6 +2755,19 @@ function syncPreview() {
   $('p-photo').innerHTML = img
     ? `<img src="${esc(img)}" alt="Sample inspection photo">`
     : 'No inspection photo attached';
+
+  const stabWrap = $('p-stability-wrap');
+  if (x.requires_stability_test) {
+    stabWrap.style.display = '';
+    $('p-stab-performed').textContent = x.stability_performed_by
+      ? x.stability_performed_by + (x.stability_lab_name ? ` (${x.stability_lab_name})` : '')
+      : x.stability_status || 'Awaiting R&D';
+    $('p-stab-result').textContent = x.stability_status === 'Pass' ? 'PASS'
+      : x.stability_status === 'Fail' ? 'FAIL' : 'Pending';
+    $('p-stab-notes').textContent = x.stability_notes || '—';
+  } else {
+    stabWrap.style.display = 'none';
+  }
 }
 
 function setSig(imgId, lineId, dataUrl) {
@@ -2542,6 +2818,7 @@ async function persist(opts = {}) {
     photo_path = S.sb.storage.from('sample-photos').getPublicUrl(path).data.publicUrl;
   }
 
+  const received = (S.colleagues || []).find(p => p.id === $('dr-received').value);
   const patch = {
     date_tested: $('dr-tested').value || null,
     test_results: rows,
@@ -2550,6 +2827,9 @@ async function persist(opts = {}) {
     analyzed_by: $('dr-an').value.trim(),
     analyzed_by_post: $('dr-anp').value.trim(),
     qa_user: S.me.id,
+    received_by_id: received?.id || null,
+    received_by: received?.full_name || null,
+    received_by_post: received?.designation || null,
     photo_path,
     status: x.status === 'Released' ? 'Released' : 'Under Test',
   };
