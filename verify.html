@@ -149,6 +149,14 @@ function renderReport(x) {
 
     ${x.photo_path ? `<div class="sect">Sample inspection image</div><div class="photo"><img src="${esc(x.photo_path)}" alt="Sample photo"></div>` : ''}
 
+    ${x.requires_stability_test ? `
+      <div class="sect">Stability testing</div>
+      <div class="row"><span class="l">Performed by</span><span class="r">${esc(x.stability_performed_by || '—')}${x.stability_lab_name ? ' · ' + esc(x.stability_lab_name) : ''}</span></div>
+      <div class="row"><span class="l">Result</span><span class="r">${resultPill(x.stability_status === 'Pass' ? 'PASS' : x.stability_status === 'Fail' ? 'FAIL' : '')}</span></div>
+      ${x.stability_notes ? `<div class="row" style="display:block"><span class="l">Notes</span><div style="margin-top:4px">${esc(x.stability_notes)}</div></div>` : ''}
+      ${x.stability_certificate_path ? `<div class="row"><span class="l">Certificate</span><span class="r"><a href="${esc(x.stability_certificate_path)}" target="_blank" rel="noopener">View document</a></span></div>` : ''}
+    ` : ''}
+
     <div class="sect">Signed off</div>
     <div class="sigs">
       <div class="sig">

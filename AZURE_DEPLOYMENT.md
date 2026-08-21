@@ -124,9 +124,11 @@ supabase_schema_v1.sql              profiles approval workflow (restored — see
 supabase_schema_v2.sql              approvals/e-signatures/QR/notifications (restored — see §9)
 supabase_schema_v3.sql              unique constraint on profiles.email (restored — see §9)
 supabase_schema_v4.sql              forced password change on admin-created accounts
+supabase_schema_v5.sql              R&D role, stability testing gate, handover/receiver tracking
 supabase/functions/admin-users/            Edge Function source
 supabase/functions/send-approval-email/    Edge Function source
 SETUP.md                            walkthrough for the approval/e-signature/QR feature set
+SETUP_STABILITY.md                  walkthrough for the R&D/stability testing feature set
 AZURE_DEPLOYMENT.md                 this document
 ```
 
@@ -257,16 +259,21 @@ re-run), per their own headers.
    repo, not a verified export. If keeping the existing project, skip
    this file entirely (the real tables already exist).
 2. Run `supabase_schema_v1.sql`, then `supabase_schema_v2.sql`, then
-   `supabase_schema_v3.sql`, then `supabase_schema_v4.sql`, in that exact
-   order, in the Supabase project's SQL editor. (`SETUP.md` covers `v2`
-   in more depth, including one manual check it can't do for you around a
-   pre-existing status constraint.)
+   `supabase_schema_v3.sql`, then `supabase_schema_v4.sql`, then
+   `supabase_schema_v5.sql`, in that exact order, in the Supabase
+   project's SQL editor. (`SETUP.md` covers `v2` in more depth, including
+   one manual check it can't do for you around a pre-existing status
+   constraint. `SETUP_STABILITY.md` covers `v5` — the R&D role, the
+   stability-testing gate, and handover/receiver tracking.)
 3. **Create the Storage bucket:** Supabase Studio → **Storage → New
    bucket** → name it exactly `sample-photos` → make it **public**. No
    SQL file creates this bucket or its access policy — it was set up by
    hand on the original project and needs to be redone by hand on a new
    one. Sample photo uploads will fail with a "bucket not found" error
-   until this exists.
+   until this exists. (The second bucket, `stability-documents` for
+   stability-testing certificates, does *not* need this manual step —
+   `supabase_schema_v5.sql` creates it and its access policy directly in
+   SQL, so it exists as soon as that file has been run.)
 4. **Deploy the Edge Functions** (needs the [Supabase
    CLI](https://supabase.com/docs/guides/cli)):
    ```

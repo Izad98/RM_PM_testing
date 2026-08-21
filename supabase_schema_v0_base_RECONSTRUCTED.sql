@@ -102,10 +102,19 @@ create table if not exists public.samples (
   submitted_by uuid references public.profiles(id) on delete set null,
 
   -- Set by QA while testing (see the report drawer in index.html)
-  status text not null default 'Awaiting QA'
-    check (status in ('Awaiting QA','Under Test','Released')),
-    -- v2 replaces this check (samples_status_check_v2) to also allow
-    -- 'Pending Approval' — do not hand-edit this constraint, let v2 do it.
+  --
+  -- Deliberately no CHECK constraint here: v2 adds one of its own
+  -- (samples_status_check_v2, allowing 'Pending Approval' too) but never
+  -- drops an earlier one first — by design, since on a *real* pre-
+  -- existing project it can't know what that earlier constraint is
+  -- named (see v2's own header comment). Adding one here anyway was
+  -- tried and confirmed to break: on a project bootstrapped from this
+  -- file, both constraints stay active and CHECK constraints AND
+  -- together, so 'Pending Approval' satisfies v2's constraint but
+  -- fails this file's narrower one — request_approval() fails outright
+  -- the first time anything reaches that status. Let v2 be the only
+  -- place that constrains this column.
+  status text not null default 'Awaiting QA',
   qa_user uuid references public.profiles(id) on delete set null,
   date_tested date,
   test_results jsonb not null default '[]'::jsonb,
