@@ -861,6 +861,13 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
                 <input id="in-rnd">
               </div>
             </div>
+            <div class="field">
+              <label>R &amp; D responsible person</label>
+              <select id="in-rnd-responsible">
+                <option value="">— none for now —</option>
+              </select>
+              <div class="hint">Optional — who in R&amp;D to notify if this sample later needs stability testing.</div>
+            </div>
             <div class="grid3">
               <div class="field">
                 <label class="req">Sample size</label>
@@ -896,6 +903,26 @@ main{flex:1;min-width:0;padding:26px 28px 60px}
             <div class="field" style="margin-bottom:0">
               <label>Note to QA</label>
               <textarea id="in-notes" rows="2" placeholder="Anything QA should know before testing"></textarea>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:14px">
+            <h3>Attachments</h3>
+            <div class="field">
+              <label>Sample photo</label>
+              <label class="photo-drop" for="in-photo" id="in-photo-box">
+                <span>Tap to add a photo of the sample being sent</span>
+              </label>
+              <input type="file" id="in-photo" accept="image/*" capture="environment" style="display:none">
+              <div class="hint">Optional — a photo of the physical sample at handover.</div>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Supporting documents</label>
+              <label class="photo-drop" for="in-docs">
+                <span>Tap to add COA / TDS / MSDS or other documents</span>
+              </label>
+              <input type="file" id="in-docs" multiple style="display:none">
+              <div id="in-docs-list" style="margin-top:8px"></div>
+              <div class="hint">Optional — add as many files as needed, one at a time or several at once.</div>
             </div>
           </div>
           <div style="display:flex;gap:9px;flex-wrap:wrap">
@@ -1782,6 +1809,7 @@ async function enterApp() {
   if (can.test()) loadApprovers();
   await loadColleagues();
   fillPeoplePicker('in-handover', ['procurement','admin'], S.me.id);
+  fillPeoplePicker('in-rnd-responsible', ['rnd','admin'], '', true);
   await loadSamples();
   go(!can.admin() && can.test() ? 'queue' : !can.admin() && can.stability() ? 'stability' : 'dashboard');
   if (can.admin()) loadUsers();
@@ -1958,14 +1986,15 @@ async function loadColleagues() {
     .select('id, full_name, designation, role').eq('is_active', true).order('full_name');
   if (!error) S.colleagues = data || [];
 }
-function fillPeoplePicker(selectId, roles, selectedId) {
+function fillPeoplePicker(selectId, roles, selectedId, allowNone) {
   const sel = $(selectId);
   if (!sel) return;
   const people = (S.colleagues || []).filter(p => roles.includes(p.role));
-  sel.innerHTML = people.length
-    ? people.map(p => `<option value="${p.id}"${p.id === selectedId ? ' selected' : ''}>
-        ${esc(p.full_name)}${p.designation ? ' · ' + esc(p.designation) : ''}</option>`).join('')
-    : '<option value="">No one available — ask an admin</option>';
+  const opts = people.map(p => `<option value="${p.id}"${p.id === selectedId ? ' selected' : ''}>
+      ${esc(p.full_name)}${p.designation ? ' · ' + esc(p.designation) : ''}</option>`).join('');
+  sel.innerHTML = allowNone
+    ? `<option value="">— none for now —</option>${opts}`
+    : (people.length ? opts : '<option value="">No one available — ask an admin</option>');
 }
 
 /* --------------------------- dashboard ------------------------------ */
@@ -2152,17 +2181,59 @@ function emptyState(icon, title, body, actionId, actionText) {
 /* ------------------------------ intake ------------------------------ */
 $('in-received').value = today();
 
+const INTAKE_PHOTO_PLACEHOLDER = '<span>Tap to add a photo of the sample being sent</span>';
+
+$('in-photo').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (f.size > 6 * 1024 * 1024) return toast('That image is over 6 MB. Use a smaller one.', 'err');
+  const rd = new FileReader();
+  rd.onload = ev => {
+    S.intakePhotoFile = f;
+    $('in-photo-box').innerHTML = `<img src="${ev.target.result}" alt="Sample photo">`;
+  };
+  rd.readAsDataURL(f);
+});
+
+function renderIntakeDocsList() {
+  const files = S.intakeDocFiles || [];
+  $('in-docs-list').innerHTML = files.map((f, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;
+                padding:6px 10px;background:var(--sink);border:1px solid var(--line);
+                border-radius:6px;margin-bottom:5px;font-size:12.5px">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name)}</span>
+      <button type="button" class="tx" data-idx="${i}" style="flex-shrink:0" title="Remove">×</button>
+    </div>`).join('');
+  $('in-docs-list').querySelectorAll('[data-idx]').forEach(b => {
+    b.onclick = () => { S.intakeDocFiles.splice(+b.dataset.idx, 1); renderIntakeDocsList(); };
+  });
+}
+$('in-docs').addEventListener('change', e => {
+  S.intakeDocFiles = S.intakeDocFiles || [];
+  [...e.target.files].forEach(f => {
+    if (!S.intakeDocFiles.some(x => x.name === f.name && x.size === f.size)) S.intakeDocFiles.push(f);
+  });
+  e.target.value = '';
+  renderIntakeDocsList();
+});
+
 $('btn-intake-clear').onclick = () => {
   ['in-desc','in-supplier','in-rnd','in-size','in-batch','in-used','in-notes']
     .forEach(id => $(id).value = '');
   $('in-received').value = today();
   $('in-priority').value = 'Normal';
   fillPeoplePicker('in-handover', ['procurement','admin'], S.me.id);
+  fillPeoplePicker('in-rnd-responsible', ['rnd','admin'], '', true);
+  S.intakePhotoFile = null;
+  $('in-photo-box').innerHTML = INTAKE_PHOTO_PLACEHOLDER;
+  S.intakeDocFiles = [];
+  renderIntakeDocsList();
   toast('Form cleared.');
 };
 
 $('btn-intake-save').onclick = async () => {
   const handover = (S.colleagues || []).find(p => p.id === $('in-handover').value);
+  const rndResp = (S.colleagues || []).find(p => p.id === $('in-rnd-responsible').value);
   const row = {
     doc_ref: $('in-docref').value.trim() || 'QA-STR-01',
     material_type: $('in-type').value,
@@ -2179,6 +2250,9 @@ $('btn-intake-save').onclick = async () => {
     handover_by_id: handover?.id || null,
     handover_by: handover?.full_name || null,
     handover_by_post: handover?.designation || null,
+    rnd_responsible_id: rndResp?.id || null,
+    rnd_responsible: rndResp?.full_name || null,
+    rnd_responsible_post: rndResp?.designation || null,
   };
   const missing = [];
   if (!row.material_description) missing.push('material description');
@@ -2189,6 +2263,37 @@ $('btn-intake-save').onclick = async () => {
   if (missing.length) return toast('Still needed: ' + missing.join(', '), 'err');
 
   busy($('btn-intake-save'), true);
+
+  // Uploads happen before the insert (the sample row doesn't have an id
+  // yet) -- a random key per sample keeps each intake's files together
+  // without needing that id.
+  const uploadKey = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  if (S.intakePhotoFile) {
+    const ext = (S.intakePhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${uploadKey}/photo.${ext}`;
+    const up = await S.sb.storage.from('intake-documents')
+      .upload(path, S.intakePhotoFile, { upsert: true, contentType: S.intakePhotoFile.type });
+    if (up.error) {
+      busy($('btn-intake-save'), false, 'Send to QA');
+      return toast('Photo did not upload: ' + up.error.message, 'err');
+    }
+    row.intake_photo_path = S.sb.storage.from('intake-documents').getPublicUrl(path).data.publicUrl;
+  }
+
+  const docs = [];
+  for (const f of (S.intakeDocFiles || [])) {
+    const path = `${uploadKey}/${Date.now()}-${f.name}`;
+    const up = await S.sb.storage.from('intake-documents')
+      .upload(path, f, { upsert: true, contentType: f.type });
+    if (up.error) {
+      busy($('btn-intake-save'), false, 'Send to QA');
+      return toast(`"${f.name}" did not upload: ` + up.error.message, 'err');
+    }
+    docs.push({ name: f.name, path: S.sb.storage.from('intake-documents').getPublicUrl(path).data.publicUrl });
+  }
+  row.intake_documents = docs;
+
   const { data, error } = await S.sb.from('samples').insert(row).select().single();
   busy($('btn-intake-save'), false, 'Send to QA');
   if (error) return toast(error.message, 'err');
@@ -2259,12 +2364,12 @@ function renderRecords() {
 $('btn-export').onclick = () => {
   const rows = filtered();
   if (!rows.length) return toast('Nothing to export with these filters.', 'err');
-  const head = ['Sample code','Doc ref','Material type','Description','Supplier','R&D ref','Sample size',
+  const head = ['Sample code','Doc ref','Material type','Description','Supplier','R&D ref','R&D responsible','Sample size',
     'Batch','Used for','Date received','Date tested','Stage','Final status','Tests','Comments',
     'Analysed by','Approved by'];
   const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const body = rows.map(x => [
-    x.sample_code, x.doc_ref, x.material_type, x.material_description, x.supplier_name, x.rnd_ref,
+    x.sample_code, x.doc_ref, x.material_type, x.material_description, x.supplier_name, x.rnd_ref, x.rnd_responsible,
     x.sample_size, x.batch_no, x.used_for, x.date_received, x.date_tested, x.status, x.final_status,
     (x.test_results || []).map(t => `${t.test}: ${t.result} (${t.status || '-'})`).join(' | '),
     x.comments, x.analyzed_by, x.approved_by,
@@ -2295,6 +2400,7 @@ function openReport(id) {
     ['Sample size', x.sample_size],
     ['Batch / lot', x.batch_no],
     ['R&D reference', x.rnd_ref],
+    ['R&D contact', x.rnd_responsible],
     ['Used for', x.used_for],
     ['Date received', humanDate(x.date_received)],
     ['Handed over by', x.handover_by],
@@ -2304,7 +2410,16 @@ function openReport(id) {
     <div class="rankrow" style="padding:7px 0">
       <span class="rname" style="color:var(--mut)">${k}</span>
       <span style="text-align:right;font-size:12.5px;max-width:60%">${esc(v)}</span>
-    </div>`).join('');
+    </div>`).join('')
+    + (x.intake_photo_path ? `
+      <div style="margin-top:10px">
+        <img src="${esc(x.intake_photo_path)}" alt="Sample photo at handover" style="max-width:100%;max-height:160px;border-radius:6px;display:block">
+      </div>` : '')
+    + ((x.intake_documents || []).length ? `
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+        ${x.intake_documents.map(d => `
+          <a href="${esc(d.path)}" target="_blank" rel="noopener" style="font-size:12.5px">${esc(d.name)}</a>`).join('')}
+      </div>` : '');
   fillPeoplePicker('dr-received', ['qa','admin'], x.received_by_id || S.me.id);
 
   $('dr-tested').value = x.date_tested || today();
