@@ -7,26 +7,45 @@
 //
 // If the Web App plan is Windows/IIS instead, this file and package.json
 // are not used — see web.config instead. Details: AZURE_DEPLOYMENT.md.
+//
+// Deliberately not express.static(__dirname, ...): this directory also
+// holds the SQL schema files, Edge Function source and deployment docs,
+// none of which should be publicly downloadable. CodeQL flags exactly
+// that pattern (js/exposure-of-private-files) because express.static
+// still holds the capability to serve the whole directory even from
+// behind a filter — see github.com/Izad98/RM_PM_testing/security/
+// code-scanning/7. Each servable file is instead named explicitly below
+// and served with res.sendFile(), which grants no directory-listing or
+// traversal capability at all: only these exact, hardcoded files can
+// ever be returned, regardless of what a request path says.
 const express = require('express');
 
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Allow-list, not a denylist: this directory also holds the SQL schema
-// files, Edge Function source and deployment docs, none of which should
-// be publicly downloadable just because express.static would happily
-// serve anything under __dirname. Only the two pages and the image
-// assets they actually reference get served; everything else 404s.
-const ALLOWED_ASSET_EXT = /\.(ico|png)$/i;
-app.use((req, res, next) => {
-  const reqPath = req.path === '/' ? '/index.html' : req.path;
-  const isPage = reqPath === '/index.html' || reqPath === '/verify.html';
-  if (!isPage && !ALLOWED_ASSET_EXT.test(reqPath)) return res.status(404).send('Not found');
-  next();
-});
+const FILES = {
+  '/': 'index.html',
+  '/index.html': 'index.html',
+  '/verify.html': 'verify.html',
+  '/favicon.ico': 'favicon.ico',
+  '/favicon-16.png': 'favicon-16.png',
+  '/favicon-32.png': 'favicon-32.png',
+  '/apple-touch-icon.png': 'apple-touch-icon.png',
+  '/hcb logo.png': 'hcb logo.png',
+  '/hcb logo dark.png': 'hcb logo dark.png',
+};
 
-app.use(express.static(__dirname, { extensions: ['html'] }));
-app.use((req, res) => res.status(404).send('Not found'));
+app.use((req, res) => {
+  let reqPath;
+  try {
+    reqPath = decodeURIComponent(req.path);
+  } catch {
+    return res.status(404).send('Not found');
+  }
+  const file = FILES[reqPath];
+  if (!file) return res.status(404).send('Not found');
+  res.sendFile(file, { root: __dirname });
+});
 
 app.listen(port, () => {
   console.log(`RM & PM Releasing Portal listening on port ${port}`);
