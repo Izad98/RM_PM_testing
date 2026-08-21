@@ -19,9 +19,31 @@
 // traversal capability at all: only these exact, hardcoded files can
 // ever be returned, regardless of what a request path says.
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const port = process.env.PORT || 8080;
+
+// Azure App Service sits behind a reverse proxy, so without this every
+// request would appear to come from that proxy's own IP — which would
+// make the rate limiter below either a no-op or, worse, bucket every
+// real visitor together as a single client. `1` trusts exactly one
+// proxy hop (Azure's front end), which is the correct value here and
+// avoids the "trust all X-Forwarded-For" mistake of `true`.
+app.set('trust proxy', 1);
+
+// CodeQL (js/missing-rate-limiting) flags the file-serving route below
+// since it does a filesystem access per request — see security/code-
+// scanning/8. The limit is generous on purpose: this is a small internal
+// tool, and colleagues on the same office network can share one apparent
+// IP behind a corporate NAT, so it's sized to never bother real use while
+// still bounding a scripted flood.
+app.use(rateLimit({
+  windowMs: 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
 
 const FILES = {
   '/': 'index.html',
