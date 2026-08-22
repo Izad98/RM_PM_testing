@@ -1,7 +1,7 @@
-# RM & PM Releasing Portal — Azure Hosting Handover
+# RM & PM Testing Portal — Azure Hosting Handover
 
 **Prepared for:** IT team hand-over — hosting on Azure App Service (Web App) under a company domain
-**Application:** RM & PM Releasing Portal (Hemas Consumer Brands) — a raw & packing material QA testing, manager-approval, e-signature and QR-verification portal.
+**Application:** RM & PM Testing Portal (Hemas Consumer Brands) — a raw & packing material QA testing, manager-approval, e-signature and QR-verification portal.
 **Repository:** `izad98/rm_pm_testing` on GitHub
 
 This document explains what the application is built from, exactly how to

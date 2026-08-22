@@ -70,5 +70,5 @@ app.use((req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`RM & PM Releasing Portal listening on port ${port}`);
+  console.log(`RM & PM Testing Portal listening on port ${port}`);
 });
